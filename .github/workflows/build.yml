@@ -1,0 +1,40 @@
+# Ripetiamo · rigenera le pagine statiche (città/materia, profili tutor, esami, sitemap)
+# a partire dagli annunci su Supabase, e ripubblica il sito se qualcosa è cambiato.
+# Si avvia da solo ogni 4 ore; a mano da GitHub → Actions → "Pagine statiche" → "Run workflow".
+name: Pagine statiche
+on:
+  schedule:
+    - cron: "17 */4 * * *"
+  workflow_dispatch:
+permissions:
+  contents: write   # per fare commit dei file generati
+  pages: write      # per chiedere a GitHub Pages di ripubblicare
+concurrency:
+  group: pagine-statiche
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Genera le pagine
+        run: node scripts/build.mjs
+      - name: Pubblica se qualcosa è cambiato
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # La data nella sitemap cambia ogni giorno: pubblichiamo solo se cambia altro.
+          if git diff --quiet -- . ':(exclude)sitemap.xml' && [ -z "$(git ls-files --others --exclude-standard)" ]; then
+            echo "Nessun annuncio cambiato: niente da pubblicare."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Aggiorna pagine statiche dagli annunci"
+          git push
+          # I push fatti con il token di Actions non riavviano GitHub Pages da soli: lo chiediamo esplicitamente.
+          gh api -X POST "repos/${{ github.repository }}/pages/builds" || echo "Pages ripubblicherà al prossimo push"
