@@ -16,5 +16,8 @@ window.RIPETIAMO_CONFIG = {
   // Google AdSense: lascia vuoto finché Google non approva il sito.
   // Poi incolla qui il tuo codice editore (ca-pub-...) e l'ID dello spazio annunci.
   ADSENSE_CLIENT: "ca-pub-4222196640359739",
-  ADSENSE_SLOT: ""
+  ADSENSE_SLOT: "",
+  // Metti true SOLO dopo aver attivato in AdSense → «Privacy e messaggi» il banner di consenso per l'Europa (CMP certificata).
+  // Finché è false lo script di Google non si carica (obbligatorio nello Spazio economico europeo, e qui ci sono minorenni).
+  ADSENSE_CMP_READY: false
 };

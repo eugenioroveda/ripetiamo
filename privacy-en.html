@@ -13,7 +13,7 @@
 <main class="wrap">
 <article class="legal">
   <h2>Privacy and cookie notice</h2>
-  <p class="meta">Version of 6 November 2026 · under Articles 13 and 14 of Regulation (EU) 2016/679 (GDPR)</p>
+  <p class="meta">Version of 17 November 2026 · under Articles 13 and 14 of Regulation (EU) 2016/679 (GDPR)</p>
   <p class="langlink"><a href="privacy.html">Versione italiana</a> · This is a translation. If the two versions differ, the Italian version prevails.</p>
 
   <h3>1. Data controller</h3>
@@ -21,27 +21,30 @@
 
   <h3>2. What data we collect</h3>
   <ul>
-    <li><b>Account:</b> email address, display name, date of birth, statement of parental consent (for users under 18).</li>
-    <li><b>Listings:</b> listing type, subjects, price, description, school or course, the area you enter and its coordinates rounded to about 100 metres.</li>
+    <li><b>Account:</b> email address, display name, date of birth, whether you are a student or a parent, statement of parental consent and a parent's email (for users under 18), the profile of whoever invited you (if you signed up with an invite link), your email alerts choice and, if you turn it on, your “Free today” note.</li>
+    <li><b>Listings:</b> listing type, levels, subjects and exams, price, description, school or course, the area you enter and its coordinates rounded to about 100 metres. For users under 18 we don't store the school, we only keep the city and round coordinates to about 1 km.</li>
+    <li><b>Group sessions:</b> title, subject, level, date, place, seats and price of the session; who joined.</li>
     <li><b>Availability and bookings:</b> the times you are available, lessons requested or confirmed, length, format, agreed amount, whether the lesson has been paid.</li>
     <li><b>Reviews</b> you write after a lesson (rating, text, your display name).</li>
     <li><b>“Verified student” badge:</b> if you sign up with a university email, we derive the university name from the email domain and show it on your profile.</li>
     <li><b>Messages</b> you send and receive in the built-in chat, and <b>reports</b> you send.</li>
     <li><b>Technical data:</b> IP address and device information, recorded automatically by the providers that host the site and the database.</li>
+    <li><b>Visit statistics:</b> we count how many times each page is viewed and which site visitors come from (for example google.com), only as daily totals. We use no cookies and don't record who visits.</li>
     <li><b>Location:</b> only if you tap “Use my location”. The location is rounded, used to calculate distances and stored only on your device.</li>
   </ul>
 
   <h3>3. Why we use it and on what basis</h3>
   <ul>
     <li>To let you use Ripetiamo: account, listings, chat, bookings, calendar. Basis: performance of the contract (Art. 6(1)(b) GDPR).</li>
-    <li>To apply the age rules (adult tutors, parental consent for minors) and protect users. Basis: legitimate interest in user safety, particularly of minors (Art. 6(1)(f)).</li>
+    <li>To apply the age rules (adult tutors, parental consent for minors), tell the parent when a minor has a confirmed in-person lesson and protect users. Basis: legitimate interest in user safety, particularly of minors (Art. 6(1)(f)).</li>
+    <li>To alert people offering lessons about new requests nearby (can be turned off in “My space”) and for aggregate visit statistics that tell us whether the site works. Basis: legitimate interest (Art. 6(1)(f)).</li>
     <li>To handle reports and meet the obligations of the Digital Services Act. Basis: legal obligation (Art. 6(1)(c)).</li>
-    <li>To show advertising through Google AdSense, only if you agree in the cookie banner. Basis: consent (Art. 6(1)(a)). We only show non-personalised ads.</li>
+    <li>To show advertising through Google AdSense, only if you agree in the cookie banner. Basis: consent (Art. 6(1)(a)). We only show non-personalised ads. Google advertising is currently not active: we will show the banner before switching it on.</li>
     <li>To show <b>local sponsors</b> (businesses near the area you search) and tell sponsors how many times their ad was seen and clicked. We only count anonymous daily totals: we don't record who sees or clicks. Basis: legitimate interest in funding the service (Art. 6(1)(f)).</li>
   </ul>
 
   <h3>4. Minors</h3>
-  <p>In Italy you can consent to online services on your own from the age of 14. For this reason, anyone under 14 cannot create an account on their own. Anyone aged 14 to 17 can sign up only by declaring that a parent knows and agrees, and cannot post listings offering lessons.</p>
+  <p>In Italy you can consent to online services on your own from the age of 14. For this reason, anyone under 14 cannot create an account on their own. Anyone aged 14 to 17 can sign up only by declaring that a parent knows and agrees and by giving a parent's email, and cannot post listings offering lessons. We only write to the parent's email when the minor has a confirmed in-person lesson or group session. Listings by minors don't show their school and only show the city.</p>
 
   <h3>5. Who sees your data</h3>
   <ul>
@@ -50,8 +53,8 @@
     <li><b>Our providers</b>, who process data on our behalf:
       <ul>
         <li>Supabase Inc. (database and sign-in), with servers in the European Union (Ireland);</li>
-        <li>Netlify Inc., to host the site;</li>
-        <li>Resend, to send sign-in emails and notifications (new bookings, confirmations, new messages: we never include message text in emails);</li>
+        <li>GitHub Inc. (GitHub Pages), to host the site;</li>
+        <li>Resend, to send sign-in emails and notifications (new bookings, confirmations, new messages, group sessions, new requests nearby, parent alerts: we never include message text in emails);</li>
         <li>OpenStreetMap Foundation (Nominatim service), which receives the text of the area you type in order to find it on the map;</li>
         <li>Google Ireland Ltd for fonts (Google Fonts) and, if you agree, for advertising (AdSense);</li>
         <li>jsDelivr, the network that delivers part of the site's code.</li>
@@ -65,11 +68,11 @@
   <p>For as long as you have an account. When you delete it from “My space”, we immediately delete your profile, listings, availability, bookings and messages. Reports may be kept for up to 12 months to handle disputes and legal obligations. Providers' technical logs follow their own retention periods.</p>
 
   <h3>7. Your rights</h3>
-  <p>You can ask us at any time to access, correct or delete your data, restrict its use, receive a copy of it or object to its processing, by writing to info@ripetiamo.eu. You can withdraw consent to advertising from the “Privacy settings” link in the banner. If you believe your data is being processed unlawfully, you can lodge a complaint with the Italian Data Protection Authority (garanteprivacy.it).</p>
+  <p>You can ask us at any time to access, correct or delete your data, restrict its use, receive a copy of it or object to its processing, by writing to info@ripetiamo.eu. Once advertising is active, you will be able to withdraw consent from the “Privacy settings” link in the banner. If you believe your data is being processed unlawfully, you can lodge a complaint with the Italian Data Protection Authority (garanteprivacy.it).</p>
 
   <h3>8. Cookies and browser storage</h3>
-  <p><b>Technical, always on:</b> the site stores in your browser your sign-in session (so you don't have to sign in every time) and your preferences, such as language, the area and the distance you chose, plus a daily note of the sponsors already counted, so they are not counted twice. They are needed for the site to work and do not require consent.</p>
-  <p><b>Advertising, only with your consent:</b> if advertising is active, Google AdSense may use cookies to show non-personalised ads, limit how often you see the same ad and prevent fraud. On your first visit a banner asks whether you agree; you can change your mind at any time.</p>
+  <p><b>Technical, always on:</b> the site stores in your browser your sign-in session (so you don't have to sign in every time) and your preferences, such as language, the area and the distance you chose, plus a daily note of the sponsors already counted, so they are not counted twice, any invite link you arrived with and your monthly earnings goal. They are needed for the site to work and do not require consent.</p>
+  <p><b>Advertising, only with your consent:</b> if advertising is active, Google AdSense may use cookies to show non-personalised ads, limit how often you see the same ad and prevent fraud. Before it is switched on, a banner will ask whether you agree; you will be able to change your mind at any time. Google advertising is currently not active and we use no advertising cookies.</p>
 
   <h3>9. Changes</h3>
   <p>If we change this notice significantly, we will tell you on the site before the changes take effect.</p>

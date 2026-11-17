@@ -7,7 +7,10 @@
 (function () {
   let L = null;
   try { L = localStorage.getItem("rip-lang"); } catch (e) {}
-  if (L !== "it" && L !== "en") L = (navigator.language || "it").toLowerCase().startsWith("it") ? "it" : "en";
+  // Il sito è in italiano. L'inglese si attiva solo se scelto, o per browser non italiani di persone vere:
+  // i motori di ricerca (che di solito si presentano in inglese) vedono sempre la versione italiana.
+  const BOT = /bot|crawl|spider|slurp|google|bing|duckduck|yandex|baidu|facebookexternalhit|whatsapp|telegram|lighthouse|headless/i.test(navigator.userAgent || "");
+  if (L !== "it" && L !== "en") L = BOT || (navigator.language || "it").toLowerCase().startsWith("it") ? "it" : "en";
   window.LANG = L;
   window.t = (it, en) => (L === "en" ? en : it);
   window.setLang = l => { try { localStorage.setItem("rip-lang", l); } catch (e) {} location.reload(); };

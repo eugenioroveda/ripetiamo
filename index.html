@@ -4,26 +4,39 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="google-adsense-account" content="ca-pub-4222196640359739">
-<title>Ripetiamo · For students, by students</title>
-<meta name="title-en" content="Ripetiamo · For students, by students">
-<meta name="description" content="Ripetizioni tra ragazzi: trova chi spiega matematica, latino, inglese e altre materie vicino a te, oppure offri le tue. Pagamento di persona, senza commissioni.">
-<meta name="description-en" content="Tutoring by students, for students: find someone near you who explains maths, Latin, English and more, or offer your own lessons. Pay in person, no fees.">
-<meta property="og:title" content="Ripetiamo · For students, by students">
-<meta property="og:description" content="Ripetizioni tra ragazzi, vicino a te o online. · Tutoring by students, near you or online.">
+<title>Ripetizioni tra studenti vicino a te, senza commissioni · Ripetiamo</title>
+<meta name="title-en" content="Tutoring by students, near you, no fees · Ripetiamo">
+<meta name="description" content="Ripetizioni per medie, superiori e università fatte da studenti universitari, vicino a te o online. Prezzi da studenti, paghi di persona, zero commissioni. Sei universitario? Guadagna spiegando quello che sai.">
+<meta name="description-en" content="Tutoring for middle school, high school and university by university students, near you or online. Student prices, pay in person, no fees. At university? Earn by explaining what you know.">
+<meta property="og:site_name" content="Ripetiamo">
+<meta property="og:locale" content="it_IT">
+<meta property="og:title" content="Ripetiamo · Ripetizioni tra studenti, senza commissioni">
+<meta property="og:description" content="Ripetizioni per medie, superiori e università fatte da studenti. Sei universitario? Guadagna spiegando quello che sai.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://ripetiamo.eu/">
+<meta property="og:image" content="https://ripetiamo.eu/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Ripetiamo: ripetizioni tra studenti, senza commissioni">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://ripetiamo.eu/">
 <meta name="theme-color" content="#FFF6EF">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2a14 14 0 1 1-14 14V8a6 6 0 0 1 6-6z' fill='%23F2994A'/%3E%3Ccircle cx='16' cy='16' r='5' fill='%23FFF6EF'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gabarito:wght@500;700;800&family=Figtree:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="styles.css">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@graph":[
+ {"@type":"WebSite","@id":"https://ripetiamo.eu/#site","url":"https://ripetiamo.eu/","name":"Ripetiamo","inLanguage":"it-IT"},
+ {"@type":"Organization","@id":"https://ripetiamo.eu/#org","name":"Ripetiamo","url":"https://ripetiamo.eu/","logo":"https://ripetiamo.eu/og.png","email":"info@ripetiamo.eu","slogan":"For students, by students"}
+]}
+</script>
 <script src="config.js"></script>
 <script>
-  // Google AdSense: si attiva solo quando ADSENSE_CLIENT è compilato in config.js.
+  // Google AdSense: si carica solo quando c'è un codice editore, uno spazio annunci E il banner di consenso
+  // (CMP certificata da Google, da attivare in AdSense → Privacy e messaggi). Finché manca, niente script di Google.
   // Annunci NON personalizzati per tutti, perché tra gli utenti ci sono minorenni.
-  (function(){var c=window.RIPETIAMO_CONFIG||{};if(!c.ADSENSE_CLIENT)return;
-    var m=document.createElement("meta");m.name="google-adsense-account";m.content=c.ADSENSE_CLIENT;document.head.appendChild(m);
+  (function(){var c=window.RIPETIAMO_CONFIG||{};if(!c.ADSENSE_CLIENT||!c.ADSENSE_SLOT||!c.ADSENSE_CMP_READY)return;
     window.adsbygoogle=window.adsbygoogle||[];window.adsbygoogle.requestNonPersonalizedAds=1;
     var s=document.createElement("script");s.async=true;s.crossOrigin="anonymous";
     s.src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client="+encodeURIComponent(c.ADSENSE_CLIENT);
@@ -31,6 +44,7 @@
 </script>
 </head>
 <body>
+<a class="sr-only" href="#main" data-en="Skip to content">Vai al contenuto</a>
 <header>
   <div class="wrap bar">
     <a class="logo" href="#annunci" aria-label="Ripetiamo, torna alla home" data-en-aria="Ripetiamo, back to home"><i></i>Ripetiamo</a>
@@ -44,46 +58,68 @@
   </div>
 </header>
 
-<main class="wrap">
+<main class="wrap" id="main" tabindex="-1">
   <!-- ANNUNCI (home) -->
   <section class="view" id="v-annunci">
     <div class="hello">
       <div>
-        <h1><span>For students,</span><br>by students.</h1>
-        <p data-en="Tutoring between students, near you. Pay in person, no fees.">Ripetizioni tra studenti, vicino a te. Paghi di persona, senza commissioni.</p>
+        <h1 data-en-html="Tutoring between students, &lt;span&gt;near you.&lt;/span&gt;">Ripetizioni tra studenti, <span>vicino a te.</span></h1>
+        <p data-en="For middle school, high school and university. Student prices, pay in person, no fees.">Per medie, superiori e università. Prezzi da studenti, paghi di persona, zero commissioni.</p>
       </div>
       <div class="pick">
         <p class="ask" data-en="What do you need?">Cosa ti serve?</p>
         <div class="choice">
-          <button data-tab="offro" class="c-help"><span class="c-txt"><b data-en="I need help">Cerco aiuto</b><small data-en="Find a tutor">Trova chi ti spiega</small></span><span class="c-arrow" aria-hidden="true">→</span></button>
-          <button data-tab="cerco" class="c-give"><span class="c-txt"><b data-en="I can help">Posso aiutare</b><small data-en="Find students">Trova chi ha bisogno</small></span><span class="c-arrow" aria-hidden="true">→</span></button>
+          <button type="button" data-tab="offro" class="c-help"><span class="c-txt"><b data-en="I need help">Cerco aiuto</b><small data-en="Find someone who explains it">Trova chi ti spiega</small></span><span class="c-arrow" aria-hidden="true">→</span></button>
+          <button type="button" data-tab="cerco" class="c-give"><span class="c-txt"><b data-en="I want to earn">Voglio guadagnare</b><small data-en="Tutor what you know">Dai ripetizioni su quello che sai</small></span><span class="c-arrow" aria-hidden="true">→</span></button>
         </div>
       </div>
     </div>
 
     <form class="where" id="whereForm">
       <label><span data-en="Where are you? City or area">Dove sei? Città o quartiere</span>
-        <input id="where" autocomplete="off" value="Milano">
+        <input id="where" autocomplete="off" value="Milano" aria-describedby="whereLoc">
         <span class="loc" id="whereLoc" aria-live="polite"></span>
       </label>
       <label><span data-en="Maximum distance">Distanza massima</span>
         <select id="radius"><option value="2">2 km</option><option value="5">5 km</option><option value="10" selected>10 km</option><option value="25">25 km</option><option value="50">50 km</option><option value="0" data-en="All of Italy">Tutta Italia</option></select>
-        <span class="loc"><button type="button" class="linkbtn small geo" id="geoBtn" data-en="📍 Use my location">📍 Usa la mia posizione</button></span>
+        <span class="loc"><button type="button" class="linkbtn small geo" id="geoBtn"><span aria-hidden="true">📍 </span><span data-en="Use my location">Usa la mia posizione</span></button></span>
       </label>
       <label class="opt"><input type="checkbox" id="showOnline" checked> <span data-en="Include online listings even if far away">Includi gli annunci online anche se lontani</span></label>
     </form>
 
-    <div class="tabs" role="tablist">
-      <button class="tab on" data-t="tutti" role="tab" data-en="All">Tutti</button>
-      <button class="tab" data-t="offro" role="tab" data-en="Offering">Chi offre</button>
-      <button class="tab" data-t="cerco" role="tab" data-en="Looking">Chi cerca</button>
+    <div class="tabs" role="group" aria-label="Tipo di annunci" data-en-aria="Listing type">
+      <button type="button" class="tab on" data-t="tutti" aria-pressed="true" data-en="All">Tutti</button>
+      <button type="button" class="tab" data-t="offro" aria-pressed="false" data-en="Tutors">Chi offre</button>
+      <button type="button" class="tab" data-t="cerco" aria-pressed="false" data-en="Requests">Chi cerca</button>
       <a class="btn" href="#pubblica" data-en="+ Post a listing">+ Pubblica un annuncio</a>
     </div>
-    <div class="filters" id="subjects">
-      <input class="search" id="q" type="search" placeholder="Cerca materia o nome" data-en-ph="Search subject or name" aria-label="Cerca" data-en-aria="Search">
+    <div class="levels" id="levels" role="group" aria-label="Livello" data-en-aria="Level"></div>
+    <div class="filters" id="subjects" role="group" aria-label="Materia" data-en-aria="Subject">
+      <input class="search" id="q" type="search" placeholder="Cerca materia, esame o nome" data-en-ph="Search subject, exam or name" aria-label="Cerca" data-en-aria="Search">
     </div>
-    <p class="count" id="count"></p>
-    <div class="grid" id="posts"><p class="loading" data-en="Loading listings…">Carico gli annunci…</p></div>
+
+    <section class="groups" id="groups" hidden aria-labelledby="groupsH">
+      <h2 id="groupsH" data-en="Group review sessions">Ripassi di gruppo</h2>
+      <p data-en="Revise with others before a test or exam: it costs less per person.">Ripassa con altri prima di una verifica o di un esame: a testa costa meno.</p>
+      <div class="grid" id="groupsGrid"></div>
+    </section>
+
+    <h2 class="sr-only" data-en="Listings">Annunci</h2>
+    <p class="count" id="count" aria-live="polite"></p>
+    <div class="grid" id="posts" aria-busy="true"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
+
+    <section class="earn" aria-labelledby="earnH">
+      <div>
+        <h2 id="earnH" data-en="At university? Earn by explaining what you know.">Sei all'università? Guadagna spiegando quello che sai.</h2>
+        <p data-en="Tutor middle and high school students, or the exams you've already passed. You set the price and the hours, you're paid in person and Ripetiamo takes nothing.">Ripetizioni a ragazzi di medie e superiori, oppure sugli esami che hai già passato. Decidi tu prezzo e orari, ti pagano di persona e Ripetiamo non trattiene nulla.</p>
+        <div class="row"><a class="btn" href="#pubblica" data-en="Post your listing">Pubblica il tuo annuncio</a><a class="btn ghost" href="/guadagnare/" data-en="How it works (and taxes)">Come funziona (e le tasse)</a></div>
+      </div>
+      <ul>
+        <li><b data-en="€0 in fees">0 € di commissioni</b><span data-en="What students pay you is all yours.">Quello che ti pagano resta tutto a te.</span></li>
+        <li><b data-en="Group sessions">Ripassi di gruppo</b><span data-en="4 people at €8 each = €32 for one hour of your time.">4 persone a 8 € = 32 € per un'ora del tuo tempo.</span></li>
+        <li><b data-en="New requests by email">Richieste nuove via email</b><span data-en="We tell you when someone near you needs your subject.">Ti avvisiamo quando qualcuno vicino a te cerca la tua materia.</span></li>
+      </ul>
+    </section>
   </section>
 
   <!-- PROFILO PUBBLICO DEL TUTOR -->
@@ -101,19 +137,29 @@
     <div class="section-h"><div><h2 data-en="Post a listing">Pubblica un annuncio</h2><p data-en="It takes two minutes. Enter the area where you teach or want lessons: we recognise it and work out the distance for people searching.">Bastano due minuti. Scrivi la zona dove fai o vuoi fare lezione: la riconosciamo e calcoliamo la distanza per chi cerca.</p></div></div>
     <form class="post" id="pubForm" novalidate>
       <div class="seg" role="group" aria-label="Tipo di annuncio" data-en-aria="Listing type">
-        <button type="button" data-k="offro" class="on" aria-pressed="true"><b data-en="I offer tutoring">Offro ripetizioni</b><small data-en="I teach the subjects I'm good at (18+ only)">Spiego le materie in cui vado forte (solo maggiorenni)</small></button>
-        <button type="button" data-k="cerco" aria-pressed="false"><b data-en="I'm looking for tutoring">Cerco ripetizioni</b><small data-en="I need help with a subject">Ho bisogno di aiuto in una materia</small></button>
+        <button type="button" data-k="offro" class="on" aria-pressed="true"><b data-en="I offer tutoring">Offro ripetizioni</b><small data-en="I earn by teaching what I'm good at (18+ only)">Guadagno spiegando quello che so (solo maggiorenni)</small></button>
+        <button type="button" data-k="cerco" aria-pressed="false"><b data-en="I'm looking for tutoring">Cerco ripetizioni</b><small data-en="For me or for my child">Per me o per mio figlio/a</small></button>
       </div>
-      <label><span data-en="Display name">Nome da mostrare</span><input id="pf-name" maxlength="40"></label>
+      <label><span data-en="Display name">Nome da mostrare</span><input id="pf-name" maxlength="40" autocomplete="nickname"></label>
       <label><span id="pf-schoolL">Scuola o università</span><input id="pf-school" maxlength="80"></label>
+      <fieldset class="full" style="border:0;padding:0;margin:0;display:grid;gap:6px">
+        <legend class="hint" style="font-size:13px;font-weight:600;padding:0;margin-bottom:6px" id="pf-lvlL">Per quali livelli?</legend>
+        <div class="checks" id="pf-levels">
+          <label><input type="checkbox" value="medie"><span data-en="Middle school">Medie</span></label>
+          <label><input type="checkbox" value="superiori"><span data-en="High school">Superiori</span></label>
+          <label><input type="checkbox" value="universita"><span data-en="University">Università</span></label>
+        </div>
+      </fieldset>
       <label><span data-en="Subjects (comma separated)">Materie (separate da virgola)</span><input id="pf-sub" placeholder="Matematica, Fisica" data-en-ph="Maths, Physics"></label>
-      <label><span id="pf-priceL">Prezzo orario (€)</span><input id="pf-price" type="number" min="5" max="200" value="15"></label>
+      <label><span id="pf-priceL">Prezzo orario (€)</span><input id="pf-price" type="number" inputmode="numeric" min="5" max="200" value="15" aria-describedby="pf-priceHint"><span class="hint" id="pf-priceHint" aria-live="polite"></span></label>
+      <label class="full" id="pf-examsRow" hidden><span id="pf-examsL">Esami universitari (separati da virgola)</span><input id="pf-exams" maxlength="400" placeholder="Analisi 1, Fisica 1, Microeconomia" data-en-ph="Calculus 1, Physics 1, Microeconomics"></label>
       <label class="full"><span data-en="Area: city, neighbourhood or town (not your home address)">Zona: città, quartiere o paese (non il tuo indirizzo)</span>
-        <input id="pf-where" autocomplete="off" placeholder="Es. Città Studi, Milano" data-en-ph="E.g. Città Studi, Milano">
+        <input id="pf-where" autocomplete="off" placeholder="Es. Città Studi, Milano" data-en-ph="E.g. Città Studi, Milano" aria-describedby="pfLoc">
         <span class="loc" id="pfLoc" aria-live="polite"></span>
       </label>
       <label class="agree full"><input type="checkbox" id="pf-on" checked><span id="pf-onL">Faccio lezione anche online</span></label>
       <label class="full"><span id="pf-bioL">Presentati</span><textarea id="pf-bio" maxlength="1000" placeholder="Cosa spieghi, a chi, come lavori" data-en-ph="What you teach, to whom, how you work"></textarea></label>
+      <p class="rule full" data-en="Not allowed on Ripetiamo: writing theses, essays or homework to be handed in by someone else, or sitting tests in their place.">Non è ammesso su Ripetiamo: scrivere tesi, tesine o compiti da consegnare al posto di altri, o fare verifiche ed esami al loro posto.</p>
       <label class="agree full"><input type="checkbox" id="pf-ok"><span id="pf-okL"></span></label>
       <div class="row full"><button class="btn" id="pf-send" data-en="Post listing">Pubblica l'annuncio</button></div>
     </form>
@@ -126,7 +172,7 @@
       <div class="threads" id="threads"></div>
       <div class="convo" id="convo" hidden>
         <div class="convo-h" id="convoH"></div>
-        <div class="msgs" id="msgs"></div>
+        <div class="msgs" id="msgs" aria-live="polite"></div>
         <form class="compose" id="compose"><textarea id="msgText" maxlength="2000" placeholder="Scrivi un messaggio" data-en-ph="Write a message" aria-label="Messaggio" data-en-aria="Message"></textarea><button class="btn" data-en="Send">Invia</button></form>
       </div>
     </div>
@@ -134,14 +180,15 @@
 
   <!-- IL MIO SPAZIO -->
   <section class="view" id="v-spazio" hidden>
-    <div class="section-h"><div><h2 id="hiName">Il mio spazio</h2><p data-en="Bookings, availability, listings and account.">Prenotazioni, disponibilità, annunci e account.</p></div></div>
+    <div class="section-h"><div><h2 id="hiName">Il mio spazio</h2><p data-en="Bookings, earnings, availability, listings and account.">Prenotazioni, guadagni, disponibilità, annunci e account.</p></div></div>
     <div class="spazio">
       <div>
+        <div id="parentNeed"></div>
         <div class="block"><h3 data-en="Requests to confirm">Richieste da confermare</h3><div class="list" id="bkPending"></div></div>
         <div class="kpis" id="kpis"></div>
         <div class="cal block">
           <div class="cal-head"><b id="weekLabel"></b>
-            <span class="row"><button class="btn ghost" id="wkPrev" aria-label="Settimana precedente" data-en-aria="Previous week">←</button><button class="btn ghost" id="wkNext" aria-label="Settimana successiva" data-en-aria="Next week">→</button></span></div>
+            <span class="row"><button class="btn ghost" id="wkPrev" type="button" aria-label="Settimana precedente" data-en-aria="Previous week">←</button><button class="btn ghost" id="wkNext" type="button" aria-label="Settimana successiva" data-en-aria="Next week">→</button></span></div>
           <div class="cal-scroll"><div class="week" id="week"></div></div>
           <div class="legend">
             <span><i style="background:var(--plum)"></i><span data-en="Confirmed lesson">Lezione confermata</span></span>
@@ -150,22 +197,44 @@
           </div>
         </div>
         <div class="block"><h3 data-en="Upcoming lessons and payments due">Lezioni in arrivo e da incassare</h3><div class="list" id="bkTutor"></div></div>
+        <div class="block" id="reqBlock" hidden><h3 data-en="Requests that match you">Richieste adatte a te</h3><p class="note" data-en="People near you looking for what you teach. Offer to help: whoever replies first usually gets the lesson.">Persone vicino a te che cercano quello che insegni. Proponiti: di solito la lezione la ottiene chi risponde per primo.</p><div class="grid req-list" id="reqList"></div></div>
+        <div class="block"><h3 data-en="My group sessions">I miei ripassi di gruppo</h3><div class="list" id="mySessions"></div></div>
         <div class="block"><h3 data-en="Lessons I booked">Lezioni che ho prenotato</h3><div class="list" id="bkStudent"></div></div>
         <div class="block"><h3 data-en="My listings">I miei annunci</h3><div class="list" id="myPosts"></div></div>
       </div>
       <aside class="side">
+        <div class="panel" id="earnPanel" hidden>
+          <h3 data-en="My earnings">I miei guadagni</h3>
+          <div id="earnBox"></div>
+          <label><span data-en="Monthly goal (€)">Obiettivo del mese (€)</span><input id="goalIn" type="number" inputmode="numeric" min="0" max="5000" step="10"></label>
+          <div class="row"><button class="btn ghost" id="csvBtn" type="button" data-en="Download lessons (CSV)">Scarica lezioni (CSV)</button></div>
+          <p class="note"><a class="linkbtn small" href="/guadagnare/" data-en="Taxes, dependants and scholarships: what to know">Tasse, figli a carico e borse di studio: cosa sapere</a></p>
+        </div>
+        <div class="panel" id="freePanel" hidden>
+          <h3 data-en="Free today">Libero oggi</h3>
+          <p class="note" data-en="Tell people you can take last-minute lessons today: your listings get a “Free today” badge until midnight.">Fai sapere che oggi puoi fare lezioni last minute: i tuoi annunci mostrano «Libero oggi» fino a mezzanotte.</p>
+          <label><span data-en="Note (optional)">Nota (facoltativa)</span><input id="freeNote" maxlength="80" placeholder="Es. dalle 17 alle 20, anche online" data-en-ph="E.g. 5–8 pm, online too"></label>
+          <button class="btn" id="freeBtn" type="button"></button>
+        </div>
         <div class="panel share-panel" id="sharePanel" hidden>
           <h3 data-en="Your public profile">Il tuo profilo pubblico</h3>
           <p class="note" data-en="Share it on Instagram, WhatsApp or in your class group: whoever opens it can book you straight away.">Condividilo su Instagram, WhatsApp o nel gruppo della classe: chi lo apre può prenotarti subito.</p>
           <div class="icsrow"><input id="profUrl" readonly aria-label="Link profilo" data-en-aria="Profile link"><button class="btn ghost" id="copyProf" type="button" data-en="Copy">Copia</button></div>
-          <button class="btn" id="shareStory" type="button" data-en="📸 Create image for Stories">📸 Crea immagine per le storie</button>
+          <button class="btn" id="shareStory" type="button" data-en="Create image for Stories">Crea immagine per le storie</button>
+          <button class="btn ghost" id="newSession" type="button" data-en="+ Organise a group session">+ Organizza un ripasso di gruppo</button>
           <a class="linkbtn small" id="viewProf" href="#" data-en="See my profile as others see it">Vedi il profilo come lo vedono gli altri</a>
           <p class="note" id="badgeNote"></p>
         </div>
-        <div class="panel">
+        <div class="panel" id="invitePanel" hidden>
+          <h3 data-en="Invite a friend">Invita un amico</h3>
+          <p class="note" data-en="Know someone who's good at a subject, or who needs help? Send them your link.">Conosci qualcuno che va forte in una materia, o che ha bisogno di aiuto? Mandagli il tuo link.</p>
+          <div class="icsrow"><input id="refUrl" readonly aria-label="Link di invito" data-en-aria="Invite link"><button class="btn ghost" id="copyRef" type="button" data-en="Copy">Copia</button></div>
+          <p class="note" id="refCount"></p>
+        </div>
+        <div class="panel" id="availPanel">
           <h3 data-en="When you're available">Quando sei disponibile</h3>
-          <p class="note" data-en="Tap the boxes to mark the hours when people can book you. They repeat every week.">Tocca le caselle per indicare le ore in cui si può prenotare con te. Valgono ogni settimana.</p>
-          <div class="cal-scroll"><div class="avail" id="avail"></div></div>
+          <p class="note" data-en="Tap the boxes to mark the hours when people can book you. They repeat every week (Italian time).">Tocca le caselle per indicare le ore in cui si può prenotare con te. Valgono ogni settimana (ora italiana).</p>
+          <div class="cal-scroll"><div class="avail" id="avail" role="group" aria-label="Disponibilità settimanale" data-en-aria="Weekly availability"></div></div>
         </div>
         <div class="panel">
           <h3 data-en="Lessons in your calendar">Le lezioni nel tuo calendario</h3>
@@ -173,11 +242,12 @@
           <div class="icsrow"><input id="ics" readonly aria-label="Link calendario" data-en-aria="Calendar link"><button class="btn" id="copyIcs" type="button" data-en="Copy">Copia</button></div>
           <div class="sync"><span>Google Calendar</span><button class="pill wait" data-how="google" type="button" data-en="How to">Come si fa</button></div>
           <div class="sync"><span>iPhone / Mac</span><button class="pill wait" data-how="apple" type="button" data-en="How to">Come si fa</button></div>
-          <p class="note" id="howto" hidden></p>
+          <p class="note" id="howto" hidden aria-live="polite"></p>
         </div>
         <div class="panel">
           <h3>Account</h3>
           <p class="note" id="acctInfo"></p>
+          <label class="toggle" id="alertsRow" hidden><input type="checkbox" id="alertsOn"><span data-en="Email me new requests near me">Avvisami via email delle nuove richieste vicino a me</span></label>
           <button class="btn ghost" id="logout" type="button" data-en="Log out">Esci</button>
           <button class="linkbtn danger small" id="delAcct" type="button" data-en="Delete my account">Elimina il mio account</button>
         </div>
@@ -186,7 +256,7 @@
   </section>
 </main>
 
-<footer><div class="wrap"><span data-en="Ripetiamo connects people offering and looking for tutoring. Lessons are offered by users.">Ripetiamo mette in contatto chi offre e chi cerca ripetizioni. Le lezioni sono offerte dagli utenti.</span><span><a href="/ripetizioni/" data-en="Tutoring by city">Ripetizioni per città</a> · <a href="termini.html" data-en-href="terms.html" data-en="Terms and conditions">Termini e condizioni</a> · <a href="privacy.html" data-en-href="privacy-en.html" data-en="Privacy and cookies">Privacy e cookie</a> · <span id="contact"></span></span></div></footer>
+<footer><div class="wrap"><span data-en="Ripetiamo connects people offering and looking for tutoring. Lessons are offered by users.">Ripetiamo mette in contatto chi offre e chi cerca ripetizioni. Le lezioni sono offerte dagli utenti.</span><span><a href="/ripetizioni/" data-en="Tutoring by city">Ripetizioni per città</a> · <a href="/guadagnare/" data-en="Earn as a tutor">Guadagnare con le ripetizioni</a> · <a href="termini.html" data-en-href="terms.html" data-en="Terms and conditions">Termini e condizioni</a> · <a href="privacy.html" data-en-href="privacy-en.html" data-en="Privacy and cookies">Privacy e cookie</a> · <span id="contact"></span></span></div></footer>
 
 <div class="scrim" id="scrim" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-title" id="sheet"></div></div>
 <div class="toast" id="toast" role="status" hidden></div>

@@ -45,9 +45,49 @@ const DB_EN = [
   [/Orario non disponibile/, "That time is not available."], [/si sovrappone/, "That time overlaps another lesson with this tutor."],
   [/solo annullare/, "You can only cancel the booking."], [/troppi messaggi/, "You've sent too many messages. Try again later."],
   [/14 anni/, "Under 14, a parent must create the account."], [/consenso di un genitore/, "Parental consent is required."],
-  [/Non sei collegato/, "You're not signed in."]];
+  [/Non sei collegato/, "You're not signed in."],
+  [/Ripasso non disponibile/, "This group session is no longer available."], [/al completo/, "This group session is full."],
+  [/nel tuo ripasso/, "You can't book a seat in your own session."], [/ripasso devi avere/, "You must be 18 or over to organise a group session."],
+  [/troppi ripassi/, "You've created too many sessions today. Try again tomorrow."], [/email di un genitore/, "A parent's email is required."],
+  [/account genitore/, "You must be 18 or over for a parent account."], [/zona del ripasso/, "Enter the area of the session."]];
+
+// ---------- orari in ora italiana, qualunque sia il fuso del browser ----------
+const romeParts = d => { const o = {}; new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Rome", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
+  .formatToParts(d).forEach(p => { if (p.type !== "literal") o[p.type] = +p.value; }); return o; };
+const romeAt = (y, m, d, h) => { const g = Date.UTC(y, m - 1, d, h); const p = romeParts(new Date(g)); return new Date(g - (Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute) - g)); };
+const todayRome = () => { const p = romeParts(new Date()); return `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`; };
+const hhRome = d => String(romeParts(d).hour).padStart(2, "0") + ":00";
+
+// ---------- livelli ----------
+const LEVELS = { medie: ["Medie", "Middle school"], superiori: ["Superiori", "High school"], universita: ["Università", "University"] };
+const lvlName = l => LEVELS[l] ? t(...LEVELS[l]) : l;
 
 function toast(m) { const el = $("#toast"); el.textContent = m; el.hidden = false; clearTimeout(el._t); el._t = setTimeout(() => el.hidden = true, 3500); }
+// Errore legato a un campo: bordo rosso, messaggio sotto il campo (letto dagli screen reader), cursore sul campo.
+function fieldErr(el, msg) {
+  if (!el) return toast(msg);
+  const id = (el.id || el.name || "campo") + "-err";
+  let sp = document.getElementById(id);
+  if (!sp) { sp = document.createElement("span"); sp.id = id; sp.className = "ferr"; sp.setAttribute("role", "alert");
+    const box = el.closest(".checks") ? el.closest(".checks").parentNode : (el.closest("label") || el.parentNode); box.appendChild(sp); }
+  sp.textContent = msg; el.setAttribute("aria-invalid", "true");
+  const before = (el.getAttribute("aria-describedby") || "").split(" ").filter(x => x && x !== id);
+  el.setAttribute("aria-describedby", [...before, id].join(" "));
+  el.focus();
+  const scope = el.closest(".checks") || el;
+  const clear = () => { sp.remove(); el.removeAttribute("aria-invalid");
+    before.length ? el.setAttribute("aria-describedby", before.join(" ")) : el.removeAttribute("aria-describedby");
+    scope.removeEventListener("input", clear); scope.removeEventListener("change", clear); };
+  scope.addEventListener("input", clear); scope.addEventListener("change", clear);
+  return false;
+}
+// Statistiche di visita: solo totali giornalieri per pagina, senza cookie e senza dati personali.
+let firstView = true;
+function trackView(path) {
+  let ref = "";
+  if (firstView) { try { const h = document.referrer ? new URL(document.referrer).hostname : ""; if (h && h !== location.hostname) ref = h; } catch (e) {} firstView = false; }
+  try { sb.rpc("track_view", { p_path: path, p_ref: ref }).then(() => {}, () => {}); } catch (e) {}
+}
 function dbErr(e) {
   const generic = t("Qualcosa non ha funzionato, riprova.", "Something went wrong. Please try again.");
   if (!e) return generic;
@@ -58,15 +98,33 @@ function dbErr(e) {
   if (EN && e.message) { const m = DB_EN.find(([re]) => re.test(e.message)); if (m) return m[1]; }
   return e.message || generic;
 }
+let sheetReturn = null;
 function openSheet(html) {
+  if ($("#scrim").hidden) sheetReturn = document.activeElement;   // dove riportare il focus alla chiusura
   const sh = $("#sheet"); sh.innerHTML = html; $("#scrim").hidden = false; sh.scrollTop = 0;
   // su telefono non mettiamo il cursore in un campo, altrimenti si apre subito la tastiera
   if (matchMedia("(max-width:720px)").matches) { sh.tabIndex = -1; sh.focus({ preventScroll: true }); return; }
   const f = sh.querySelector("textarea,input,select,button.btn"); f && f.focus();
 }
-function closeSheet() { $("#scrim").hidden = true; $("#sheet").innerHTML = ""; }
+function closeSheet() {
+  $("#scrim").hidden = true; $("#sheet").innerHTML = "";
+  const r = sheetReturn; sheetReturn = null;
+  if (r && document.contains(r) && r.focus) r.focus({ preventScroll: true });
+}
 $("#scrim").addEventListener("click", e => { if (e.target.id === "scrim") closeSheet(); });
-addEventListener("keydown", e => { if (e.key === "Escape" && !$("#scrim").hidden) closeSheet(); });
+// Finestra aperta: Esc la chiude e Tab resta dentro la finestra.
+addEventListener("keydown", e => {
+  if ($("#scrim").hidden) return;
+  if (e.key === "Escape") { closeSheet(); return; }
+  if (e.key !== "Tab") return;
+  const sh = $("#sheet");
+  const f = [...sh.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')]
+    .filter(x => x.offsetParent !== null);
+  if (!f.length) { e.preventDefault(); return; }
+  const first = f[0], last = f[f.length - 1], a = document.activeElement;
+  if (e.shiftKey && (a === first || a === sh || !sh.contains(a))) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && (a === last || !sh.contains(a))) { e.preventDefault(); first.focus(); }
+});
 if (CFG.CONTACT_EMAIL) $("#contact").textContent = CFG.CONTACT_EMAIL;
 const CANCEL = t("Annulla", "Cancel");
 
@@ -161,7 +219,7 @@ function renderCode(email) {
   $("#codeForm").onsubmit = async e => {
     e.preventDefault();
     const token = inp.value.trim();
-    if (token.length < 6) return toast(t("Il codice ha almeno 6 cifre", "The code has at least 6 digits"));
+    if (token.length < 6) return fieldErr(inp, t("Il codice ha almeno 6 cifre", "The code has at least 6 digits"));
     const btn = e.target.querySelector("button"); btn.disabled = true; btn.textContent = t("Controllo…", "Checking…");
     const { error } = await sb.auth.verifyOtp({ email, token, type: "email" });
     btn.disabled = false; btn.textContent = t("Entra", "Sign in");
@@ -189,7 +247,7 @@ function renderAuth() {
     $("#loginForm").onsubmit = async e => {
       e.preventDefault();
       const email = $("#email").value.trim();
-      if (!/^\S+@\S+\.\S+$/.test(email)) return toast(t("Scrivi un indirizzo email valido", "Enter a valid email address"));
+      if (!/^\S+@\S+\.\S+$/.test(email)) return fieldErr($("#email"), t("Scrivi un indirizzo email valido", "Enter a valid email address"));
       const btn = e.target.querySelector("button"), lbl = btn.textContent; btn.disabled = true; btn.textContent = t("Invio…", "Sending…");
       const { error } = await sendCode(email);
       btn.disabled = false; btn.textContent = lbl;
@@ -203,24 +261,42 @@ function renderAuth() {
     box.innerHTML = `
       <h2>${t("Ultimo passo", "One last step")}</h2>
       <p>${t("Come ti chiami e quando sei nato? Ci serve per le regole di sicurezza: per offrire lezioni bisogna essere maggiorenni.", "What's your name and date of birth? We need it for our safety rules: you must be 18 or over to offer lessons.")}</p>
-      <form id="profForm" class="auth" style="border:none;padding:0">
-        <label>${t("Nome da mostrare (es. Giulia R.)", "Display name (e.g. Giulia R.)")}<input id="pName" maxlength="40" required></label>
+      <form id="profForm" class="auth" style="border:none;padding:0" novalidate>
+        <fieldset style="border:0;padding:0;margin:0;display:grid;gap:6px"><legend class="hint" style="font-size:13px;font-weight:600;padding:0;margin-bottom:6px">${t("Chi sei?", "Who are you?")}</legend>
+          <div class="checks" id="pRole">
+            <label><input type="radio" name="role" value="studente" checked><span>${t("Sono uno studente", "I'm a student")}</span></label>
+            <label><input type="radio" name="role" value="genitore"><span>${t("Sono un genitore", "I'm a parent")}</span></label>
+          </div>
+          <p class="note" id="pRoleNote" hidden>${t("Con un account genitore cerchi e prenoti lezioni per tuo figlio o tua figlia: lui o lei non deve iscriversi.", "With a parent account you search and book lessons for your child: they don't need to sign up.")}</p>
+        </fieldset>
+        <label>${t("Nome da mostrare (es. Giulia R.)", "Display name (e.g. Giulia R.)")}<input id="pName" maxlength="40" required autocomplete="nickname"></label>
         <label>${t("Data di nascita", "Date of birth")}<input id="pBirth" type="date" max="${max.toISOString().slice(0, 10)}" min="1930-01-01" required></label>
-        <label class="agree" id="pConsentRow" hidden><input type="checkbox" id="pConsent"><span>${t("Ho meno di 18 anni e un mio genitore sa che uso Ripetiamo ed è d'accordo.", "I'm under 18 and a parent knows I use Ripetiamo and agrees.")}</span></label>
+        <div id="pMinor" hidden style="display:grid;gap:12px">
+          <label>${t("Email di un genitore", "A parent's email")}<input id="pParent" type="email" autocomplete="off" maxlength="200" placeholder="${t("genitore@esempio.it", "parent@example.com")}">
+            <span class="hint">${t("Gli scriviamo solo quando hai una lezione o un ripasso di persona confermato, per sicurezza.", "We only write to them when you have a confirmed in-person lesson or group session, for safety.")}</span></label>
+          <label class="agree"><input type="checkbox" id="pConsent"><span>${t("Ho meno di 18 anni e un mio genitore sa che uso Ripetiamo ed è d'accordo.", "I'm under 18 and a parent knows I use Ripetiamo and agrees.")}</span></label>
+        </div>
         <label class="agree"><input type="checkbox" id="pTerms"><span>${t(`Accetto i <a href="${TERMS}" target="_blank">Termini e condizioni</a> e ho letto l'<a href="${PRIVACY}" target="_blank">Informativa privacy</a>.`, `I accept the <a href="${TERMS}" target="_blank">Terms and conditions</a> and have read the <a href="${PRIVACY}" target="_blank">Privacy notice</a>.`)}</span></label>
         <button class="btn">${t("Crea il profilo", "Create profile")}</button>
-        <p class="small">${t("Hai meno di 14 anni? Chiedi a un genitore di creare l'account per te.", "Under 14? Ask a parent to create the account for you.")}</p>
+        <p class="small">${t("Hai meno di 14 anni? Chiedi a un genitore di creare l'account per te, scegliendo «Sono un genitore».", "Under 14? Ask a parent to create the account for you by choosing “I'm a parent”.")}</p>
       </form>`;
-    $("#pBirth").onchange = () => { const v = $("#pBirth").value; $("#pConsentRow").hidden = !v || age(v) >= 18; };
+    const role = () => (document.querySelector('#pRole input:checked') || {}).value || "studente";
+    $("#pRole").onchange = () => { $("#pRoleNote").hidden = role() !== "genitore"; };
+    $("#pBirth").onchange = () => { const v = $("#pBirth").value; $("#pMinor").hidden = !v || age(v) >= 18; };
     $("#profForm").onsubmit = async e => {
       e.preventDefault();
-      const b = $("#pBirth").value, n = $("#pName").value.trim();
-      if (n.length < 2) return toast(t("Scrivi un nome di almeno 2 lettere", "Enter a name of at least 2 letters"));
-      if (!b) return toast(t("Inserisci la data di nascita", "Enter your date of birth"));
-      if (age(b) < 14) return toast(t("Sotto i 14 anni l'account deve aprirlo un genitore", "Under 14, a parent must create the account"));
-      if (age(b) < 18 && !$("#pConsent").checked) return toast(t("Serve il consenso di un genitore", "Parental consent is required"));
-      if (!$("#pTerms").checked) return toast(t("Per continuare accetta i termini", "Accept the terms to continue"));
-      const { data, error } = await sb.from("profiles").insert({ id: user.id, display_name: n, birth_date: b, parent_consent: age(b) < 18 }).select().single();
+      const b = $("#pBirth").value, n = $("#pName").value.trim(), minor = b && age(b) < 18, pe = $("#pParent").value.trim();
+      if (n.length < 2) return fieldErr($("#pName"), t("Scrivi un nome di almeno 2 lettere", "Enter a name of at least 2 letters"));
+      if (!b) return fieldErr($("#pBirth"), t("Inserisci la data di nascita", "Enter your date of birth"));
+      if (age(b) < 14) return fieldErr($("#pBirth"), t("Sotto i 14 anni l'account deve aprirlo un genitore", "Under 14, a parent must create the account"));
+      if (role() === "genitore" && minor) return fieldErr($("#pBirth"), t("Per un account genitore devi avere almeno 18 anni", "You must be 18 or over for a parent account"));
+      if (minor && !/^\S+@\S+\.\S+$/.test(pe)) return fieldErr($("#pParent"), t("Scrivi l'email di un genitore", "Enter a parent's email"));
+      if (minor && pe.toLowerCase() === (user.email || "").toLowerCase()) return fieldErr($("#pParent"), t("Serve l'email di un genitore, non la tua", "We need a parent's email, not yours"));
+      if (minor && !$("#pConsent").checked) return fieldErr($("#pConsent"), t("Serve il consenso di un genitore", "Parental consent is required"));
+      if (!$("#pTerms").checked) return fieldErr($("#pTerms"), t("Per continuare accetta i termini", "Accept the terms to continue"));
+      const row = { id: user.id, display_name: n, birth_date: b, parent_consent: !!minor, role: role(), ref: ls.get("rip-ref", null) };
+      if (minor) row.parent_email = pe;
+      const { data, error } = await sb.from("profiles").insert(row).select().single();
       if (error) return toast(dbErr(error));
       profile = data; toast(t("Benvenuto su Ripetiamo, ", "Welcome to Ripetiamo, ") + n.split(" ")[0] + "!");
       goNext();
@@ -238,6 +314,7 @@ function route() {
   const h = location.hash.slice(1);
   let v = h.startsWith("t/") ? "tutor" : h; if (!VIEWS.includes(v) || (v === "tutor" && !h.startsWith("t/"))) v = "annunci";
   if (["pubblica", "messaggi", "spazio"].includes(v) && needLogin(v)) return;
+  if (current !== v || v === "tutor") trackView("/#" + (v === "tutor" ? "t" : v));
   current = v;
   VIEWS.forEach(x => $("#v-" + x).hidden = x !== v);
   $$("nav a").forEach(a => a.hash === "#" + v ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"));
@@ -254,7 +331,8 @@ addEventListener("hashchange", route);
 const MY_POS = t("La tua posizione", "Your location");
 let me = ls.get("rip-where", null) || { label: "Milano", city: "Milano", lat: 45.464, lon: 9.19 };
 if (me.mine) me.label = MY_POS;
-let tab = "tutti", activeSub = "*", lastPosts = [];
+let tab = "tutti", activeSub = "*", activeLvl = ls.get("rip-lvl", "*"), lastPosts = [];
+if (!LEVELS[activeLvl]) activeLvl = "*";
 $("#where").value = me.label;
 $("#radius").value = String(ls.get("rip-radius", 10));
 const BASE_SUBJECTS = ["Matematica", "Fisica", "Latino", "Inglese", "Chimica", "Italiano", "Economia"];
@@ -303,8 +381,71 @@ function renderChips() {
   const subs = [...new Set([...BASE_SUBJECTS, ...lastPosts.flatMap(p => p.subjects)])];
   const box = $("#subjects"); box.querySelectorAll(".chip").forEach(c => c.remove());
   ["*", ...subs].forEach(s => { const b = document.createElement("button"); b.type = "button"; b.className = "chip" + (s === activeSub ? " on" : "");
-    b.textContent = s === "*" ? t("Tutte", "All") : subj(s);
+    b.textContent = s === "*" ? t("Tutte le materie", "All subjects") : subj(s); b.setAttribute("aria-pressed", s === activeSub);
     b.onclick = () => { activeSub = s; renderChips(); renderPosts(); }; box.appendChild(b); });
+  const lv = $("#levels"); lv.innerHTML = "";
+  ["*", ...Object.keys(LEVELS)].forEach(l => { const b = document.createElement("button"); b.type = "button"; b.className = "chip" + (l === activeLvl ? " on" : "");
+    b.textContent = l === "*" ? t("Tutti i livelli", "All levels") : lvlName(l); b.setAttribute("aria-pressed", l === activeLvl);
+    b.onclick = () => { activeLvl = l; ls.set("rip-lvl", l); renderChips(); renderPosts(); renderGroups(); }; lv.appendChild(b); });
+}
+
+// ---------- ripassi di gruppo (bacheca) ----------
+let groups = [];
+async function loadGroups() {
+  const R = +$("#radius").value;
+  try { const { data } = await sb.rpc("sessions_near", { p_lat: me.lat, p_lon: me.lon, p_radius_km: R ? Math.max(R, 10) : 0 }); groups = data || []; }
+  catch (e) { groups = []; }
+  renderGroups();
+}
+const GROUPS = new Map();
+function groupCard(s) {
+  GROUPS.set(String(s.id), s);
+  const left = s.seats - s.taken, online = s.mode === "Online";
+  const who = s.slug ? `<a class="plink" href="#t/${encodeURIComponent(s.slug)}">${esc(s.tutor_name)}</a>` : esc(s.tutor_name);
+  const act = user && s.tutor === user.id ? `<a class="mine" href="#spazio">${t("Il tuo ripasso", "Your session")}</a>`
+    : left > 0 ? `<button class="btn" type="button" data-join="${s.id}">${t("Prenota un posto", "Book a seat")}</button>`
+    : `<span class="pill">${t("Completo", "Full")}</span>`;
+  return `<article class="card gcard">
+    <div class="top"><span class="kind gruppo">${t("Ripasso di gruppo", "Group session")}</span><span class="dist">${online ? "Online" : (s.distance_km != null ? fmtKm(s.distance_km) : "")}</span></div>
+    <h3>${esc(s.title)}</h3>
+    <div class="tags"><span class="tag">${esc(subj(s.subject))}</span><span class="lvl">${esc(lvlName(s.level))}</span></div>
+    <p><b>${esc(fmtWhen(s.starts_at))}</b> · ${dec(s.hours)} h · ${online ? "online" : `<span aria-hidden="true">📍 </span>${esc(s.place_label)}`}</p>
+    <p>${t("Con", "With")} ${who} ${vBadge(s.verified_school)}</p>
+    ${s.body ? `<p>${esc(s.body)}</p>` : ""}
+    <div class="foot"><span class="price">€${s.price} <small>/${t("persona", "person")}</small></span><span class="seats">${left} ${left === 1 ? t("posto libero", "seat left") : t("posti liberi", "seats left")}</span>${act}</div>
+  </article>`;
+}
+function renderGroups() {
+  const list = groups.filter(s => (activeLvl === "*" || s.level === activeLvl) && (activeSub === "*" || s.subject === activeSub));
+  $("#groups").hidden = !list.length;
+  $("#groupsGrid").innerHTML = list.map(groupCard).join("");
+  $$("#groupsGrid [data-join]").forEach(b => b.onclick = () => joinSession(GROUPS.get(b.dataset.join)));
+}
+function safetyCheck(inPerson) {
+  return isAdult() || !inPerson ? "" : `<label class="agree"><input type="checkbox" id="safeOk"><span>${t("Ho avvisato un genitore. La lezione sarà in un luogo pubblico (biblioteca, aula studio) o a casa con un adulto presente.", "I've told a parent. The lesson will be in a public place (library, study room) or at home with an adult present.")}</span></label>`;
+}
+async function joinSession(s) {
+  if (!s) return;
+  if (needLogin("annunci")) return;
+  const inPerson = s.mode !== "Online";
+  openSheet(`<h2 id="sh-title">${esc(s.title)}</h2>
+    <p class="note">${esc(subj(s.subject))} · ${esc(lvlName(s.level))} · ${t("con", "with")} ${esc(s.tutor_name)}</p>
+    <div class="total"><div><span>${esc(fmtWhen(s.starts_at))}</span><span>${dec(s.hours)} h</span></div><div><span>${inPerson ? esc(s.place_label) : "Online"}</span><span></span></div>
+      <div class="big"><span>${t("Da dare al tutor, di persona", "To pay the tutor in person")}</span><span>${eur(s.price)}</span></div></div>
+    <p class="note">${t("Il posto è tuo appena prenoti. Se non puoi più venire, liberalo da «Il mio spazio» così lo prende qualcun altro.", "The seat is yours as soon as you book. If you can't make it, free it up from “My space” so someone else can take it.")}</p>
+    <div class="sheet-actions">${safetyCheck(inPerson)}
+      <label class="agree"><input type="checkbox" id="jOk"><span>${t(`Ho letto i <a href="${TERMS}" target="_blank">Termini e condizioni</a> e so che il ripasso è un accordo tra me e il tutor.`, `I've read the <a href="${TERMS}" target="_blank">Terms and conditions</a> and understand the session is an agreement between me and the tutor.`)}</span></label>
+      <div class="row"><button class="btn ghost" id="cx" type="button">${CANCEL}</button><button class="btn" id="ok" type="button">${t("Prenota il posto", "Book the seat")}</button></div></div>`);
+  $("#cx").onclick = closeSheet;
+  $("#ok").onclick = async () => {
+    if ($("#safeOk") && !$("#safeOk").checked) return fieldErr($("#safeOk"), t("Conferma di aver avvisato un genitore", "Confirm you've told a parent"));
+    if (!$("#jOk").checked) return fieldErr($("#jOk"), t("Per prenotare spunta l'accettazione dei termini", "Tick the box to accept the terms"));
+    $("#ok").disabled = true;
+    const { error } = await sb.from("session_seats").insert({ session_id: s.id });
+    $("#ok").disabled = false;
+    if (error) return toast(error.code === "23505" ? t("Hai già un posto in questo ripasso.", "You already have a seat in this session.") : dbErr(error));
+    closeSheet(); toast(t("Posto prenotato! Lo trovi in «Il mio spazio».", "Seat booked! You'll find it in “My space”.")); loadGroups();
+  };
 }
 let postsSeq = 0;
 async function loadPosts() {
@@ -312,8 +453,9 @@ async function loadPosts() {
   const R = +$("#radius").value;
   const [{ data, error }] = await Promise.all([
     sb.rpc("posts_near", { p_lat: me.lat, p_lon: me.lon, p_radius_km: R, p_include_online: $("#showOnline").checked, p_kind: tab === "tutti" ? null : tab }),
-    loadSponsors()]);
+    loadSponsors(), loadGroups()]);
   if (my !== postsSeq) return;
+  $("#posts").setAttribute("aria-busy", "false");
   if (error) { $("#posts").innerHTML = `<div class="empty">${t("Non riesco a caricare gli annunci.", "Can't load listings.")} ${esc(dbErr(error))}</div>`; return; }
   lastPosts = data || []; renderChips(); renderPosts();
 }
@@ -329,13 +471,18 @@ function postCard(p) {
   const name = p.slug ? `<a class="plink" href="#t/${encodeURIComponent(p.slug)}">${esc(p.name)}</a>` : esc(p.name);
   const rating = p.reviews_count > 0 ? ` · <span class="stars" title="${p.rating}/5">★ ${dec(p.rating)}</span> (${p.reviews_count})` : "";
   const place = !hasDist || p.near
-    ? "📍 " + esc(p.place_label) + (p.online ? t(" · anche online", " · also online") : "")
-    : "🌐 " + t("Solo online · da ", "Online only · from ") + esc(city);
+    ? `<span aria-hidden="true">📍 </span>` + esc(p.place_label) + (p.online ? t(" · anche online", " · also online") : "")
+    : `<span aria-hidden="true">🌐 </span>` + t("Solo online · da ", "Online only · from ") + esc(city);
+  const lv = (p.levels || []).map(l => `<span class="lvl">${esc(lvlName(l))}</span>`).join("");
+  const ex = (p.exams || []).length ? `<p class="exams"><b>${p.kind === "offro" ? t("Esami:", "Exams:") : t("Esame:", "Exam:")}</b> ${esc(p.exams.join(", "))}${p.university ? " · " + esc(p.university) : ""}</p>` : "";
+  const free = p.free_today ? `<span class="free">${t("Libero oggi", "Free today")}</span>` : "";
   return `<article class="card">
-    <div class="top"><span class="kind ${p.kind}">${p.kind === "offro" ? t("Offre ripetizioni", "Offers tutoring") : t("Cerca ripetizioni", "Looking for tutoring")}</span>${hasDist ? `<span class="dist">${p.near ? fmtKm(p.distance_km) : "Online"}</span>` : ""}</div>
+    <div class="top"><span class="kind ${p.kind}">${p.kind === "offro" ? t("Offre ripetizioni", "Offers tutoring") : t("Cerca ripetizioni", "Looking for tutoring")}</span>${free}${hasDist ? `<span class="dist">${p.near ? fmtKm(p.distance_km) : "Online"}</span>` : ""}</div>
     <div class="who">${avatar(p.name)}<div><b>${name}</b><small>${esc(p.school)}</small>${vBadge(p.verified_school)}</div></div>
-    <div class="tags">${p.subjects.map(x => `<span class="tag">${esc(subj(x))}</span>`).join("")}</div>
+    <div class="tags">${p.subjects.map(x => `<span class="tag">${esc(subj(x))}</span>`).join("")}${lv}</div>
+    ${ex}
     <p>${esc(p.body)}</p>
+    ${p.free_today && p.free_note ? `<p><b>${t("Oggi:", "Today:")}</b> ${esc(p.free_note)}</p>` : ""}
     <p>${place} · ${ago(p.created_at)}${rating}</p>
     <div class="foot">
       <span class="price">${p.kind === "cerco" ? `<small>${t("fino a", "up to")}</small> ` : ""}€${p.price} <small>/${t("ora", "hour")}</small></span>
@@ -355,7 +502,10 @@ function bindCards(root) {
 
 function renderPosts() {
   const R = +$("#radius").value, q = norm($("#q").value);
-  const list = lastPosts.filter(p => (activeSub === "*" || p.subjects.includes(activeSub)) && (!q || norm(p.name + " " + p.subjects.join(" ") + " " + p.subjects.map(subj).join(" ") + " " + p.body).includes(q)));
+  const list = lastPosts.filter(p => (activeSub === "*" || p.subjects.includes(activeSub))
+    && (activeLvl === "*" || !(p.levels || []).length || p.levels.includes(activeLvl))
+    && (!q || norm(p.name + " " + p.subjects.join(" ") + " " + p.subjects.map(subj).join(" ") + " " + (p.exams || []).join(" ") + " " + (p.university || "") + " " + p.body).includes(q)))
+    .sort((a, b) => (b.near - a.near) || (b.free_today - a.free_today) || 0);
   const nNear = list.filter(p => p.near).length;
   const area = R ? t("entro ", "within ") + R + " km" : t("in tutta Italia", "across Italy");
   $("#count").textContent = EN
@@ -383,7 +533,7 @@ $("#geoBtn").onclick = () => {
     ls.set("rip-where", me); loadPosts();
   }, () => toast(t("Non riesco a leggere la posizione. Scrivi la tua città.", "Can't read your location. Type your city instead.")), { timeout: 10000, maximumAge: 600000 });
 };
-function setTab(x) { tab = x; $$(".tab").forEach(b => b.classList.toggle("on", b.dataset.t === x));
+function setTab(x) { tab = x; $$(".tab").forEach(b => { b.classList.toggle("on", b.dataset.t === x); b.setAttribute("aria-pressed", b.dataset.t === x); });
   $$(".choice button").forEach(b => b.classList.toggle("on", b.dataset.tab === x)); loadPosts(); }
 $$(".tab").forEach(b => b.onclick = () => setTab(b.dataset.t));
 $$(".choice button").forEach(b => b.onclick = () => { setTab(b.dataset.tab); $("#whereForm").scrollIntoView({ behavior: "smooth", block: "start" }); });
@@ -400,13 +550,14 @@ async function book(p) {
   if (av.error || busy.error) { closeSheet(); return toast(dbErr(av.error || busy.error)); }
   const taken = new Set((busy.data || []).map(x => new Date(typeof x === "string" ? x : x.busy_slots).getTime()));
   const free = new Set((av.data || []).map(a => a.weekday + "-" + a.hour));
-  // Prossimi 14 giorni, almeno 2 ore da adesso. (Orari nel fuso del browser.)
-  const days = [], soon = Date.now() + 2 * 3600e3;
+  // Prossimi 14 giorni, almeno 2 ore da adesso. Gli orari sono sempre in ora italiana (come li ha indicati il tutor),
+  // anche se chi prenota ha il telefono su un altro fuso (per esempio in Erasmus).
+  const days = [], soon = Date.now() + 2 * 3600e3, now = romeParts(new Date());
   for (let i = 0; i < 14; i++) {
-    const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + i);
-    const wd = d.getDay() || 7, slots = [];
+    const d = new Date(Date.UTC(now.year, now.month - 1, now.day + i, 12));   // mezzogiorno: stessa data in Italia
+    const y = d.getUTCFullYear(), m = d.getUTCMonth() + 1, dd = d.getUTCDate(), wd = d.getUTCDay() || 7, slots = [];
     for (let h = 7; h <= 22; h++) { if (!free.has(wd + "-" + h)) continue;
-      const s = new Date(d); s.setHours(h); if (s.getTime() < soon || taken.has(s.getTime())) continue; slots.push(s); }
+      const s = romeAt(y, m, dd, h); if (s.getTime() < soon || taken.has(s.getTime())) continue; slots.push(s); }
     if (slots.length) days.push({ d, slots });
   }
   const first = esc(p.name.split(" ")[0]);
@@ -417,35 +568,39 @@ async function book(p) {
     return;
   }
   let pick = days[0].slots[0];
-  const wdf = new Intl.DateTimeFormat(LOC, { weekday: "short" }), mf = new Intl.DateTimeFormat(LOC, { month: "short" });
+  const wdf = new Intl.DateTimeFormat(LOC, { weekday: "short", timeZone: TZ }), mf = new Intl.DateTimeFormat(LOC, { month: "short", timeZone: TZ });
   openSheet(`
     <div class="who">${avatar(p.name)}<div><h2 id="sh-title">${t("Lezione con ", "Lesson with ")}${first}</h2><small class="note">${esc(p.subjects.map(subj).join(", "))} · €${p.price}/${t("ora", "hour")}</small></div></div>
     <div><label>${t("Scegli giorno e ora", "Choose day and time")}</label>
-      <div class="daypick" id="daypick">${days.map(({ d }, i) => `<button type="button" data-di="${i}" class="${i ? "" : "on"}" aria-label="${fmtDay(d)}"><small>${wdf.format(d)}</small><b>${d.getDate()}</b><small>${mf.format(d)}</small></button>`).join("")}</div>
+      <div class="daypick" id="daypick">${days.map(({ d }, i) => `<button type="button" data-di="${i}" class="${i ? "" : "on"}" aria-label="${fmtDay(d)}"><small>${wdf.format(d)}</small><b>${d.getUTCDate()}</b><small>${mf.format(d)}</small></button>`).join("")}</div>
       <div class="times" id="times"></div></div>
     <label>${t("Durata", "Length")}<select id="dur"><option value="1">${t("1 ora", "1 hour")}</option><option value="1.5">${t("1 ora e mezza", "1½ hours")}</option><option value="2">${t("2 ore", "2 hours")}</option></select></label>
     ${p.online ? `<label>${t("Dove", "Where")}<select id="mode"><option value="Di persona">${MODE("Di persona")}</option><option value="Online">Online</option></select></label>` : ""}
     <div class="total" id="tot"></div>
     <p class="note">${t(`${first} riceve la richiesta e la conferma. Paghi direttamente a fine lezione, come vi accordate (contanti, Satispay, bonifico). Ripetiamo non incassa nulla.`, `${first} receives the request and confirms it. You pay directly at the end of the lesson, however you agree (cash, payment app, bank transfer). Ripetiamo takes nothing.`)}</p>
     <div class="sheet-actions">
+      <div id="bkSafe">${safetyCheck(true)}</div>
       <label class="agree"><input type="checkbox" id="bk-ok"><span>${t(`Ho letto i <a href="${TERMS}" target="_blank">Termini e condizioni</a> e so che la lezione è un accordo tra me e ${first}.`, `I've read the <a href="${TERMS}" target="_blank">Terms and conditions</a> and understand the lesson is an agreement between me and ${first}.`)}</span></label>
       <div class="row"><button class="btn ghost" id="cx" type="button">${CANCEL}</button><button class="btn" id="ok" type="button">${t("Invia richiesta", "Send request")}</button></div>
     </div>`);
   const showDay = i => {
     $$("#daypick button").forEach(b => b.classList.toggle("on", +b.dataset.di === i));
-    $("#times").innerHTML = days[i].slots.map(s => `<button type="button" data-t="${s.getTime()}">${String(s.getHours()).padStart(2, "0")}:00</button>`).join("");
+    $$("#daypick button").forEach(b => b.setAttribute("aria-pressed", +b.dataset.di === i));
+    $("#times").innerHTML = days[i].slots.map(s => `<button type="button" data-t="${s.getTime()}" aria-pressed="false">${hhRome(s)}</button>`).join("");
     const tb = $$("#times button");
     const keep = tb.find(b => +b.dataset.t === pick.getTime()) || tb[0];
-    keep.classList.add("on"); pick = new Date(+keep.dataset.t);
-    tb.forEach(b => b.onclick = () => { tb.forEach(x => x.classList.remove("on")); b.classList.add("on"); pick = new Date(+b.dataset.t); });
+    keep.classList.add("on"); keep.setAttribute("aria-pressed", "true"); pick = new Date(+keep.dataset.t);
+    tb.forEach(b => b.onclick = () => { tb.forEach(x => { x.classList.remove("on"); x.setAttribute("aria-pressed", "false"); }); b.classList.add("on"); b.setAttribute("aria-pressed", "true"); pick = new Date(+b.dataset.t); });
   };
   $$("#daypick button").forEach(b => b.onclick = () => showDay(+b.dataset.di));
   showDay(0);
   const upd = () => { const h = +$("#dur").value; $("#tot").innerHTML = `<div><span>${dec(h)} h × €${p.price}</span><span>${eur(p.price * h)}</span></div><div class="big"><span>${t("Da dare a fine lezione", "To pay at the end of the lesson")}</span><span>${eur(Math.round(p.price * h))}</span></div>`; };
   $("#dur").onchange = upd; upd();
+  if ($("#mode")) $("#mode").onchange = () => { $("#bkSafe").innerHTML = safetyCheck($("#mode").value !== "Online"); };
   $("#cx").onclick = closeSheet;
   $("#ok").onclick = async () => {
-    if (!$("#bk-ok").checked) return toast(t("Per prenotare spunta l'accettazione dei termini", "Tick the box to accept the terms"));
+    if ($("#safeOk") && !$("#safeOk").checked) return fieldErr($("#safeOk"), t("Conferma di aver avvisato un genitore", "Confirm you've told a parent"));
+    if (!$("#bk-ok").checked) return fieldErr($("#bk-ok"), t("Per prenotare spunta l'accettazione dei termini", "Tick the box to accept the terms"));
     $("#ok").disabled = true;
     const { error } = await sb.from("bookings").insert({ post_id: p.id, starts_at: pick.toISOString(), hours: +$("#dur").value, mode: $("#mode") ? $("#mode").value : "Di persona" });
     $("#ok").disabled = false;
@@ -480,9 +635,10 @@ function writeTo(p) {
 }
 async function loadMessages(silent) {
   if (!user) return;
-  const { data, error } = await sb.from("messages").select("*").order("created_at", { ascending: true }).limit(1000);
+  // gli ultimi 1000 messaggi (i più recenti), poi in ordine cronologico
+  const { data, error } = await sb.from("messages").select("*").order("created_at", { ascending: false }).limit(1000);
   if (error) { if (!silent) toast(dbErr(error)); return; }
-  msgs = data || []; updateBadge();
+  msgs = (data || []).reverse(); updateBadge();
   if (current === "messaggi") renderThreads();
 }
 function threads() {
@@ -562,24 +718,50 @@ function report(p) {
 // ---------- pubblica ---------------------------------------------------
 let kind = "offro";
 const COPY = EN ? {
-  offro: { school: "School or university", price: "Hourly rate (€)", on: "I also teach online", bio: "About you",
+  offro: { school: "School or university", price: "Hourly rate (€)", on: "I also teach online", bio: "About you", lvl: "Which levels do you teach?", exams: "University exams you can explain (comma separated)",
     ok: `I'm 18 or over, I accept the <a href="${TERMS}" target="_blank">Terms and conditions</a> and I understand that I, not Ripetiamo, offer the lessons.` },
-  cerco: { school: "Year or course", price: "Maximum budget per hour (€)", on: "Online is fine too", bio: "What you need",
+  cerco: { school: "Year or course", price: "Maximum budget per hour (€)", on: "Online is fine too", bio: "What you need", lvl: "Which level?", exams: "Exams you need help with (comma separated)",
     ok: `I accept the <a href="${TERMS}" target="_blank">Terms and conditions</a>.` } } : {
-  offro: { school: "Scuola o università", price: "Prezzo orario (€)", on: "Faccio lezione anche online", bio: "Presentati",
+  offro: { school: "Scuola o università", price: "Prezzo orario (€)", on: "Faccio lezione anche online", bio: "Presentati", lvl: "Per quali livelli insegni?", exams: "Esami universitari che sai spiegare (separati da virgola)",
     ok: `Ho almeno 18 anni, accetto i <a href="${TERMS}" target="_blank">Termini e condizioni</a> e so che sono io, non Ripetiamo, a offrire le lezioni.` },
-  cerco: { school: "Classe o corso", price: "Budget massimo all'ora (€)", on: "Va bene anche online", bio: "Cosa ti serve",
+  cerco: { school: "Classe o corso", price: "Budget massimo all'ora (€)", on: "Va bene anche online", bio: "Cosa ti serve", lvl: "Per quale livello?", exams: "Esami per cui ti serve aiuto (separati da virgola)",
     ok: `Accetto i <a href="${TERMS}" target="_blank">Termini e condizioni</a>.` } };
+const pfLevels = () => $$("#pf-levels input:checked").map(i => i.value);
 function setKind(k) { kind = k; const c = COPY[k];
   $$(".seg button").forEach(b => { b.classList.toggle("on", b.dataset.k === k); b.setAttribute("aria-pressed", b.dataset.k === k); });
-  $("#pf-schoolL").textContent = c.school; $("#pf-priceL").textContent = c.price; $("#pf-onL").textContent = c.on; $("#pf-bioL").textContent = c.bio; $("#pf-okL").innerHTML = c.ok; $("#pf-ok").checked = false; }
+  const parent = profile && profile.role === "genitore" && k === "cerco";
+  $("#pf-schoolL").textContent = parent ? t("Classe di tuo figlio/a", "Your child's year") : c.school;
+  $("#pf-priceL").textContent = c.price; $("#pf-onL").textContent = c.on; $("#pf-bioL").textContent = c.bio; $("#pf-okL").innerHTML = c.ok; $("#pf-ok").checked = false;
+  $("#pf-lvlL").textContent = c.lvl; $("#pf-examsL").textContent = c.exams; priceHint(); }
+$("#pf-levels").onchange = () => { $("#pf-examsRow").hidden = !pfLevels().includes("universita"); priceHint(); };
+// Prezzo suggerito: quanto chiedono gli altri per la stessa materia e livello
+let hintSeq = 0;
+async function priceHint() {
+  const my = ++hintSeq, out = $("#pf-priceHint"); if (!out) return;
+  const s0 = ($("#pf-sub").value.split(",")[0] || "").trim(), lv = pfLevels();
+  const s = s0 ? (SUBJ_IT[s0.toLowerCase()] || s0[0].toUpperCase() + s0.slice(1)) : "";
+  const generic = kind === "offro"
+    ? t("Indicativamente tra 10 e 20 €/ora: chi inizia di solito chiede un po' meno, chi ha esperienza o insegna all'università un po' di più.", "Roughly €10–20 an hour: beginners usually ask a bit less, experienced or university-level tutors a bit more.")
+    : t("Di solito le ripetizioni tra studenti costano tra 10 e 20 €/ora.", "Tutoring between students usually costs €10–20 an hour.");
+  if (!s) { out.textContent = generic; return; }
+  try {
+    const { data } = await sb.rpc("price_stats", { p_subject: s, p_level: lv.length === 1 ? lv[0] : null });
+    if (my !== hintSeq) return;
+    if (data && data.n >= 3) {
+      const a = Math.round(data.p25), b = Math.round(data.p75);
+      out.innerHTML = t(`Su Ripetiamo per <b>${esc(s)}</b> si chiede di solito <b>${a === b ? a : a + "–" + b} €/ora</b> (${data.n} annunci).`,
+        `On Ripetiamo, <b>${esc(subj(s))}</b> usually costs <b>€${a === b ? a : a + "–" + b} an hour</b> (${data.n} listings).`);
+    } else out.textContent = generic;
+  } catch (e) { out.textContent = generic; }
+}
+$("#pf-sub").addEventListener("change", priceHint);
 $$(".seg button").forEach(b => b.onclick = () => {
   if (b.dataset.k === "offro" && profile && !isAdult()) return toast(t("Per offrire ripetizioni devi avere almeno 18 anni. Puoi pubblicare un annuncio per cercarle.", "You must be 18 or over to offer tutoring. You can post a listing to look for it."));
   setKind(b.dataset.k); });
 const checkPfWhere = locField($("#pf-where"), $("#pfLoc"));
 function preparePublish() {
   if (profile && !$("#pf-name").value) $("#pf-name").value = profile.display_name;
-  if (profile && !isAdult() && kind === "offro") setKind("cerco");
+  if (profile && (!isAdult() || profile.role === "genitore") && kind === "offro") setKind("cerco"); else setKind(kind);
   if (!$("#pf-where").value && !me.mine) { $("#pf-where").value = me.label; checkPfWhere(); }
 }
 // le materie scritte in inglese si salvano in italiano, così i filtri funzionano per tutti
@@ -588,20 +770,27 @@ $("#pubForm").onsubmit = async e => {
   e.preventDefault();
   if (needLogin("pubblica")) return;
   const pl = $("#pf-where")._place || await checkPfWhere();
-  if (!pl) { $("#pf-where").focus(); return toast(t("Scrivi una zona che riconosciamo: città o quartiere", "Enter an area we recognise: city or neighbourhood")); }
   const subjects = [...new Set($("#pf-sub").value.split(",").map(s => s.trim()).filter(Boolean)
     .map(s => SUBJ_IT[s.toLowerCase()] || (s[0].toUpperCase() + s.slice(1))))].slice(0, 6);
   const body = $("#pf-bio").value.trim(), name = $("#pf-name").value.trim(), price = Math.round(+$("#pf-price").value);
-  if (name.length < 2) return toast(t("Scrivi il nome da mostrare", "Enter a display name"));
-  if (!subjects.length) return toast(t("Scrivi almeno una materia", "Enter at least one subject"));
-  if (!(price >= 5 && price <= 200)) return toast(t("Il prezzo deve essere tra 5 e 200 € l'ora", "The price must be between €5 and €200 an hour"));
-  if (body.length < 10) return toast(t("Scrivi almeno una frase su di te o su cosa ti serve", "Write at least one sentence about you or what you need"));
-  if (!$("#pf-ok").checked) return toast(t("Per pubblicare spunta l'accettazione dei termini", "Tick the box to accept the terms"));
+  const levels = pfLevels(), school = $("#pf-school").value.trim();
+  const exams = levels.includes("universita") ? [...new Set($("#pf-exams").value.split(",").map(s => s.trim().slice(0, 60)).filter(Boolean))].slice(0, 8) : [];
+  if (name.length < 2) return fieldErr($("#pf-name"), t("Scrivi il nome da mostrare", "Enter a display name"));
+  if (!levels.length) return fieldErr($("#pf-levels input"), t("Scegli almeno un livello", "Choose at least one level"));
+  if (!subjects.length) return fieldErr($("#pf-sub"), t("Scrivi almeno una materia", "Enter at least one subject"));
+  if (!(price >= 5 && price <= 200)) return fieldErr($("#pf-price"), t("Il prezzo deve essere tra 5 e 200 € l'ora", "The price must be between €5 and €200 an hour"));
+  if (!pl) return fieldErr($("#pf-where"), t("Scrivi una zona che riconosciamo: città o quartiere", "Enter an area we recognise: city or neighbourhood"));
+  if (body.length < 10) return fieldErr($("#pf-bio"), t("Scrivi almeno una frase su di te o su cosa ti serve", "Write at least one sentence about you or what you need"));
+  if (/\b(tesi|tesina|tesine)\b.*\b(scrivo|scrivere|scritta|faccio|realizzo)\b|\b(scrivo|faccio|realizzo)\b.*\b(tesi|tesina|tesine)\b/i.test(body))
+    return fieldErr($("#pf-bio"), t("Su Ripetiamo non si scrivono tesi o tesine per altri. Puoi aiutare a capire, impostare e correggere.", "Writing theses for others isn't allowed. You can help people understand, plan and revise."));
+  if (!$("#pf-ok").checked) return fieldErr($("#pf-ok"), t("Per pubblicare spunta l'accettazione dei termini", "Tick the box to accept the terms"));
+  const university = kind === "offro" && levels.includes("universita") ? (profile && profile.verified_school) || school : "";
   const btn = $("#pf-send"); btn.disabled = true;
-  const { error } = await sb.from("posts").insert({ kind, name, school: $("#pf-school").value.trim(), subjects, price, body, place_label: pl.label, lat: pl.lat, lon: pl.lon, online: $("#pf-on").checked });
+  const { error } = await sb.from("posts").insert({ kind, name, school, subjects, price, body, place_label: pl.label, lat: pl.lat, lon: pl.lon, online: $("#pf-on").checked,
+    levels, exams, university: university.slice(0, 80) });
   btn.disabled = false;
   if (error) return toast(dbErr(error));
-  $("#pf-bio").value = ""; $("#pf-sub").value = ""; $("#pf-ok").checked = false;
+  $("#pf-bio").value = ""; $("#pf-sub").value = ""; $("#pf-exams").value = ""; $("#pf-ok").checked = false;
   toast(kind === "offro" ? t("Annuncio pubblicato. Ricordati di indicare quando sei disponibile.", "Listing posted. Remember to set when you're available.") : t("Annuncio pubblicato.", "Listing posted."));
   location.hash = kind === "offro" ? "spazio" : "annunci";
   if (kind !== "offro") loadPosts();
@@ -616,17 +805,191 @@ async function loadSpazio() {
   $("#hiName").textContent = t("Ciao ", "Hi ") + profile.display_name.split(" ")[0] + " 👋";
   $("#acctInfo").textContent = (user.email || "") + t(" · iscritto dal ", " · member since ") + new Date(profile.created_at).toLocaleDateString(LOC);
   $("#ics").value = CFG.CALENDAR_URL + "?token=" + profile.calendar_token;
-  const [b, a, p, rv] = await Promise.all([
+  const [b, a, p, rv, ms, seats] = await Promise.all([
     sb.from("bookings").select("*").order("starts_at", { ascending: true }).limit(500),
     sb.from("availability").select("weekday,hour").eq("tutor", user.id),
     sb.from("posts").select("*").eq("author", user.id).order("created_at", { ascending: false }),
-    sb.from("reviews").select("booking_id").eq("student", user.id)
+    sb.from("reviews").select("booking_id").eq("student", user.id),
+    sb.from("sessions").select("*").eq("tutor", user.id).order("starts_at", { ascending: false }).limit(100),
+    sb.from("session_seats").select("session_id,student,student_name,created_at").limit(1000)
   ]);
   if (b.error || a.error || p.error) return toast(dbErr(b.error || a.error || p.error));
   bookings = b.data || []; myAvail = new Set((a.data || []).map(x => x.weekday + "-" + x.hour));
   reviewed = new Set((rv.data || []).map(x => x.booking_id));
+  mySessions = ms.data || []; allSeats = seats.data || [];
+  const joinedIds = allSeats.filter(x => x.student === user.id).map(x => x.session_id);
+  joined = [];
+  if (joinedIds.length) { const { data } = await sb.from("sessions").select("*").in("id", joinedIds).order("starts_at"); joined = data || []; }
   setupSharePanel(p.data || []);
   renderSpazio(p.data || []);
+  renderSessions();
+  setupEarnings(p.data || []);
+  setupExtras(p.data || []);
+}
+let mySessions = [], allSeats = [], joined = [];
+
+// ---------- ripassi di gruppo (il mio spazio) ----------
+function renderSessions() {
+  const now = new Date(), rows = [];
+  mySessions.filter(s => s.status === "aperto" && new Date(s.starts_at) > new Date(now - 864e5)).forEach(s => {
+    const ppl = allSeats.filter(x => x.session_id === s.id);
+    rows.push(`<div class="item"><div class="txt"><b>${esc(s.title)}</b><small>${esc(fmtWhen(s.starts_at))} · ${dec(s.hours)} h · ${s.mode === "Online" ? "online" : esc(s.place_label)} · €${s.price}/${t("persona", "person")}</small>
+      <small>${ppl.length}/${s.seats} ${t("iscritti", "joined")}${ppl.length ? ": " + ppl.map(x => esc(x.student_name)).join(", ") : ""}</small></div>
+      <div class="acts">${new Date(s.starts_at) > now ? `<button class="btn ghost danger" type="button" data-scancel="${s.id}">${t("Annulla ripasso", "Cancel session")}</button>` : ""}</div></div>`);
+  });
+  joined.filter(s => new Date(s.starts_at) > new Date(now - 864e5)).forEach(s => {
+    rows.push(`<div class="item"><div class="txt"><b>${esc(s.title)}</b><small>${t("con", "with")} ${esc(s.tutor_name)} · ${esc(fmtWhen(s.starts_at))} · ${s.mode === "Online" ? "online" : esc(s.place_label)} · ${eur(s.price)}</small></div>
+      <span class="status ${s.status === "aperto" ? "confermata" : "annullata"}">${s.status === "aperto" ? t("iscritto", "joined") : t("annullato", "cancelled")}</span>
+      <div class="acts">${s.status === "aperto" && new Date(s.starts_at) > now ? `<button class="btn ghost" type="button" data-sleave="${s.id}">${t("Libera il posto", "Free my seat")}</button>` : ""}</div></div>`);
+  });
+  $("#mySessions").innerHTML = rows.join("") || `<p class="note">${isAdult() && profile.role !== "genitore"
+    ? t("Nessun ripasso. Prima di verifiche ed esami organizzane uno: più persone, meno costo a testa, più guadagno per te.", "No sessions. Before tests and exams, organise one: more people, lower price each, more earnings for you.")
+    : t('Nessun ripasso. Li trovi nella <a href="#annunci">bacheca</a>, quando ce ne sono vicino a te.', 'No sessions. You\'ll find them on the <a href="#annunci">listings</a> when there are some near you.')}</p>`;
+  $$("[data-scancel]").forEach(b => b.onclick = async () => {
+    if (!b.dataset.sure) { b.dataset.sure = "1"; b.textContent = t("Conferma annullamento", "Confirm cancellation"); return; }
+    const { error } = await sb.from("sessions").update({ status: "annullato" }).eq("id", +b.dataset.scancel);
+    if (error) return toast(dbErr(error)); toast(t("Ripasso annullato: avvisiamo gli iscritti.", "Session cancelled: we'll tell the participants.")); loadSpazio();
+  });
+  $$("[data-sleave]").forEach(b => b.onclick = async () => {
+    const { error } = await sb.from("session_seats").delete().match({ session_id: +b.dataset.sleave, student: user.id });
+    if (error) return toast(dbErr(error)); toast(t("Posto liberato.", "Seat freed.")); loadSpazio();
+  });
+}
+function sessionSheet(myPosts) {
+  const subs = [...new Set(myPosts.filter(p => p.kind === "offro").flatMap(p => p.subjects))];
+  const pl0 = myPosts.find(p => p.kind === "offro");
+  const min = new Date(Date.now() + 864e5).toISOString().slice(0, 10);
+  openSheet(`<h2 id="sh-title">${t("Organizza un ripasso di gruppo", "Organise a group session")}</h2>
+    <p class="note">${t("Per esempio prima di una verifica o di un esame: ognuno paga la sua quota di persona, a fine ripasso.", "For example before a test or exam: everyone pays their share in person at the end.")}</p>
+    <label>${t("Titolo", "Title")}<input id="sTitle" maxlength="80" placeholder="${t("Es. Ripasso derivate per la verifica", "E.g. Derivatives review before the test")}"></label>
+    <label>${t("Materia", "Subject")}<input id="sSub" maxlength="40" list="sSubs" value="${esc(subs[0] || "")}"><datalist id="sSubs">${subs.map(s => `<option value="${esc(s)}">`).join("")}</datalist></label>
+    <label>${t("Livello", "Level")}<select id="sLvl">${Object.keys(LEVELS).map(l => `<option value="${l}"${l === "superiori" ? " selected" : ""}>${esc(lvlName(l))}</option>`).join("")}</select></label>
+    <div class="row" style="justify-content:stretch"><label style="flex:1">${t("Giorno", "Day")}<input id="sDay" type="date" min="${min}" value="${min}"></label>
+      <label style="flex:1">${t("Ora (italiana)", "Time (Italy)")}<select id="sHour">${[...Array(15)].map((_, i) => `<option value="${i + 8}"${i + 8 === 17 ? " selected" : ""}>${i + 8}:00</option>`).join("")}</select></label></div>
+    <div class="row" style="justify-content:stretch"><label style="flex:1">${t("Durata", "Length")}<select id="sDur"><option value="1">1 h</option><option value="1.5">1,5 h</option><option value="2" selected>2 h</option><option value="3">3 h</option></select></label>
+      <label style="flex:1">${t("Posti", "Seats")}<select id="sSeats">${[2, 3, 4, 5, 6, 7, 8].map(n => `<option${n === 4 ? " selected" : ""}>${n}</option>`).join("")}</select></label>
+      <label style="flex:1">${t("€ a persona", "€ per person")}<input id="sPrice" type="number" inputmode="numeric" min="3" max="100" value="8"></label></div>
+    <label>${t("Dove", "Where")}<select id="sMode"><option value="Di persona">${MODE("Di persona")}</option><option value="Online">Online</option></select></label>
+    <label id="sPlaceRow">${t("Luogo pubblico (biblioteca, aula studio…) e città", "Public place (library, study room…) and city")}<input id="sPlace" maxlength="120" value="${esc(pl0 ? pl0.place_label : "")}"><span class="loc" id="sLoc" aria-live="polite"></span></label>
+    <label>${t("Cosa farete (facoltativo)", "What you'll cover (optional)")}<textarea id="sBody" maxlength="600"></textarea></label>
+    <div class="sheet-actions"><div class="row"><button class="btn ghost" id="cx" type="button">${CANCEL}</button><button class="btn" id="ok" type="button">${t("Pubblica il ripasso", "Publish session")}</button></div></div>`);
+  const chk = locField($("#sPlace"), $("#sLoc"));
+  if ($("#sPlace").value) chk();
+  $("#sMode").onchange = () => { $("#sPlaceRow").hidden = $("#sMode").value === "Online"; };
+  $("#cx").onclick = closeSheet;
+  $("#ok").onclick = async () => {
+    const title = $("#sTitle").value.trim(), sub = $("#sSub").value.trim(), day = $("#sDay").value, price = Math.round(+$("#sPrice").value), online = $("#sMode").value === "Online";
+    if (title.length < 5) return fieldErr($("#sTitle"), t("Scrivi un titolo di almeno 5 caratteri", "Enter a title of at least 5 characters"));
+    if (sub.length < 2) return fieldErr($("#sSub"), t("Scrivi la materia", "Enter the subject"));
+    if (!day) return fieldErr($("#sDay"), t("Scegli il giorno", "Choose the day"));
+    if (!(price >= 3 && price <= 100)) return fieldErr($("#sPrice"), t("Tra 3 e 100 € a persona", "Between €3 and €100 per person"));
+    const pl = online ? null : ($("#sPlace")._place || await chk());
+    if (!online && !pl) return fieldErr($("#sPlace"), t("Scrivi un luogo che riconosciamo", "Enter a place we recognise"));
+    const [y, m, d] = day.split("-").map(Number);
+    const row = { title, subject: SUBJ_IT[sub.toLowerCase()] || sub[0].toUpperCase() + sub.slice(1), level: $("#sLvl").value, starts_at: romeAt(y, m, d, +$("#sHour").value).toISOString(),
+      hours: +$("#sDur").value, seats: +$("#sSeats").value, price, mode: $("#sMode").value, body: $("#sBody").value.trim() };
+    if (pl) Object.assign(row, { place_label: $("#sPlace").value.trim().slice(0, 120) || pl.label, lat: pl.lat, lon: pl.lon });
+    $("#ok").disabled = true;
+    const { error } = await sb.from("sessions").insert(row);
+    $("#ok").disabled = false;
+    if (error) return toast(dbErr(error));
+    closeSheet(); toast(t("Ripasso pubblicato! Condividilo nei gruppi della classe o del corso.", "Session published! Share it in your class or course groups.")); loadSpazio(); loadGroups();
+  };
+}
+
+// ---------- guadagni ----------
+function lessonRows() {
+  const uid = user.id, rows = [];
+  bookings.filter(x => x.tutor === uid && x.status === "confermata").forEach(x => rows.push({ when: new Date(x.starts_at), what: subj(x.subject), who: x.student_name, hours: +x.hours, mode: MODE(x.mode), amount: x.price, paid: x.paid, type: t("Lezione", "Lesson") }));
+  mySessions.filter(s => s.status === "aperto").forEach(s => { const n = allSeats.filter(x => x.session_id === s.id).length;
+    if (n) rows.push({ when: new Date(s.starts_at), what: subj(s.subject), who: n + " " + t("persone", "people"), hours: +s.hours, mode: MODE(s.mode), amount: n * s.price, paid: null, type: t("Ripasso di gruppo", "Group session") }); });
+  return rows.sort((a, b) => a.when - b.when);
+}
+function setupEarnings(myPosts) {
+  const tutor = myPosts.some(p => p.kind === "offro") || bookings.some(x => x.tutor === user.id) || mySessions.length;
+  $("#earnPanel").hidden = !tutor; if (!tutor) return;
+  const rows = lessonRows(), now = new Date(), p = romeParts(now);
+  const done = rows.filter(r => r.when < now);
+  const inMonth = r => { const q = romeParts(r.when); return q.year === p.year && q.month === p.month; };
+  const inYear = r => romeParts(r.when).year === p.year;
+  const sum = a => a.reduce((s, r) => s + r.amount, 0);
+  const month = sum(done.filter(inMonth)), year = sum(done.filter(inYear)), planned = sum(rows.filter(r => r.when >= now && inMonth(r)));
+  const goal = +ls.get("rip-goal", 0) || 0;
+  $("#goalIn").value = goal || "";
+  const pct = goal ? Math.min(100, Math.round(month / goal * 100)) : 0;
+  $("#earnBox").innerHTML = `<div class="kpis" style="grid-template-columns:1fr 1fr;margin:0">
+      <div class="kpi"><small>${t("Questo mese", "This month")}</small><b>${eur(month)}</b><span>${planned ? t("+ ", "+ ") + eur(planned) + t(" in programma", " scheduled") : t("lezioni già fatte", "lessons given")}</span></div>
+      <div class="kpi"><small>${t("Quest'anno", "This year")}</small><b>${eur(year)}</b><span>${done.filter(inYear).length} ${t("tra lezioni e ripassi", "lessons and sessions")}</span></div></div>
+    ${goal ? `<div><div class="goal" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}" aria-label="${t("Obiettivo del mese", "Monthly goal")}"><i style="width:${pct}%"></i></div>
+      <p class="note">${pct}% ${t("dell'obiettivo di", "of your goal of")} ${eur(goal)}</p></div>` : ""}
+    ${year >= 3500 ? `<p class="rule">${t("Attenzione: sotto i 24 anni, oltre 4.000 € di reddito annuo non sei più fiscalmente a carico dei tuoi genitori.", "Heads-up: under 24, above €4,000 of yearly income you are no longer a tax dependant of your parents.")} <a href="/guadagnare/#tasse">${t("Leggi la guida", "Read the guide")}</a></p>` : ""}`;
+  $("#goalIn").onchange = () => { ls.set("rip-goal", Math.max(0, Math.round(+$("#goalIn").value || 0))); setupEarnings(myPosts); };
+  $("#csvBtn").onclick = () => {
+    const q = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const head = [t("Data", "Date"), t("Tipo", "Type"), t("Materia", "Subject"), t("Con", "With"), t("Ore", "Hours"), t("Modalità", "Mode"), t("Importo (€)", "Amount (€)"), t("Incassato", "Paid")];
+    const lines = rows.map(r => [new Intl.DateTimeFormat(LOC, { dateStyle: "short", timeStyle: "short", timeZone: TZ }).format(r.when), r.type, r.what, r.who, dec(r.hours), r.mode, dec(r.amount), r.paid == null ? "" : r.paid ? t("sì", "yes") : t("no", "no")].map(q).join(";"));
+    const blob = new Blob(["﻿" + [head.map(q).join(";"), ...lines].join("\r\n")], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `ripetiamo-lezioni-${todayRome()}.csv`; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  };
+}
+
+// ---------- libero oggi, inviti, avvisi, email del genitore, richieste adatte ----------
+async function setupExtras(myPosts) {
+  const offers = myPosts.filter(p => p.kind === "offro" && p.active), tutor = isAdult() && offers.length > 0;
+  // libero oggi
+  $("#freePanel").hidden = !tutor;
+  if (tutor) {
+    const isFree = profile.free_on === todayRome();
+    $("#freeNote").value = isFree ? profile.free_note || "" : "";
+    $("#freeBtn").textContent = isFree ? t("Non sono più libero oggi", "I'm no longer free today") : t("Sono libero oggi", "I'm free today");
+    $("#freeBtn").className = isFree ? "btn ghost" : "btn";
+    $("#freeBtn").onclick = async () => {
+      const on = profile.free_on !== todayRome();
+      const patch = on ? { free_on: todayRome(), free_note: $("#freeNote").value.trim().slice(0, 80) } : { free_on: null, free_note: "" };
+      const { error } = await sb.from("profiles").update(patch).eq("id", user.id);
+      if (error) return toast(dbErr(error));
+      Object.assign(profile, patch); toast(on ? t("Fatto: oggi i tuoi annunci mostrano «Libero oggi».", "Done: your listings show “Free today” today.") : t("Ok, tolto.", "Ok, removed."));
+      setupExtras(myPosts); loadPosts();
+    };
+  }
+  // avvisi via email
+  $("#alertsRow").hidden = !tutor;
+  $("#alertsOn").checked = profile.alerts !== false;
+  $("#alertsOn").onchange = async () => {
+    const { error } = await sb.from("profiles").update({ alerts: $("#alertsOn").checked }).eq("id", user.id);
+    if (error) { $("#alertsOn").checked = !$("#alertsOn").checked; return toast(dbErr(error)); }
+    profile.alerts = $("#alertsOn").checked; toast(profile.alerts ? t("Avvisi attivi", "Alerts on") : t("Avvisi disattivati", "Alerts off"));
+  };
+  // inviti
+  $("#invitePanel").hidden = !profile.slug;
+  if (profile.slug) {
+    const url = SITE_URL + "/?ref=" + encodeURIComponent(profile.slug);
+    $("#refUrl").value = url;
+    $("#copyRef").onclick = () => { const i = $("#refUrl"); try { navigator.clipboard.writeText(url).then(() => toast(t("Link copiato", "Link copied")), () => i.select()); } catch (e) { i.select(); } };
+    sb.rpc("my_referrals").then(({ data }) => { $("#refCount").textContent = data ? t(`Si sono iscritte con il tuo link: ${data}`, `People who joined with your link: ${data}`) : ""; }, () => {});
+  }
+  // minorenne senza email del genitore (account creati prima di questa regola)
+  const box = $("#parentNeed");
+  if (!isAdult() && !profile.parent_email) {
+    box.innerHTML = `<div class="banner"><b>${t("Manca l'email di un genitore", "A parent's email is missing")}</b><br>${t("Gli scriveremo solo quando avrai una lezione o un ripasso di persona confermato.", "We'll only write to them when you have a confirmed in-person lesson or group session.")}
+      <div class="icsrow" style="margin-top:8px"><input id="pneedIn" type="email" aria-label="${t("Email di un genitore", "A parent's email")}" placeholder="${t("genitore@esempio.it", "parent@example.com")}"><button class="btn" id="pneedBtn" type="button">${t("Salva", "Save")}</button></div></div>`;
+    $("#pneedBtn").onclick = async () => {
+      const v = $("#pneedIn").value.trim();
+      if (!/^\S+@\S+\.\S+$/.test(v) || v.toLowerCase() === (user.email || "").toLowerCase()) return fieldErr($("#pneedIn"), t("Scrivi l'email di un genitore", "Enter a parent's email"));
+      const { error } = await sb.from("profiles").update({ parent_email: v }).eq("id", user.id);
+      if (error) return toast(dbErr(error)); profile.parent_email = v; box.innerHTML = ""; toast(t("Salvata, grazie.", "Saved, thanks."));
+    };
+  } else box.innerHTML = "";
+  // richieste adatte a chi offre
+  $("#reqBlock").hidden = !tutor;
+  if (tutor) {
+    const o = offers[0], mine = new Set(offers.flatMap(p => p.subjects)), lv = new Set(offers.flatMap(p => p.levels || []));
+    const { data } = await sb.rpc("posts_near", { p_lat: o.lat, p_lon: o.lon, p_radius_km: 25, p_include_online: offers.some(p => p.online), p_kind: "cerco" });
+    const list = (data || []).filter(p => p.author !== user.id && p.subjects.some(s => mine.has(s)) && (!lv.size || !(p.levels || []).length || p.levels.some(l => lv.has(l)))).slice(0, 6);
+    $("#reqList").innerHTML = list.length ? list.map(postCard).join("") : `<p class="note">${t("Per ora nessuna richiesta vicino a te per le tue materie. Ti avvisiamo via email quando arriva.", "No requests near you for your subjects yet. We'll email you when one arrives.")}</p>`;
+    bindCards($("#reqList"));
+  }
 }
 function bkItem(x, role) {
   const other = role === "tutor" ? x.student_name : x.tutor_name, past = new Date(x.starts_at) < new Date();
@@ -771,7 +1134,8 @@ function reviewSheet(x) {
 // ---------- profilo pubblico del tutor ---------------------------------
 // i link condivisi puntano sempre al dominio vero, anche se il sito è aperto dall'indirizzo provvisorio
 const SITE_URL = /(^|\.)ripetiamo\.eu$/.test(location.hostname) ? location.origin : "https://ripetiamo.eu";
-const profileUrl = slug => SITE_URL + "/#t/" + encodeURIComponent(slug);
+// indirizzo vero (indicizzabile dai motori di ricerca); se la pagina non è ancora stata generata, 404.html rimanda a /#t/slug
+const profileUrl = slug => SITE_URL + "/t/" + encodeURIComponent(slug) + "/";
 async function loadTutor(slug) {
   const box = $("#tutorBox");
   box.innerHTML = `<p class="loading">${t("Carico il profilo…", "Loading profile…")}</p>`;
@@ -780,7 +1144,7 @@ async function loadTutor(slug) {
   if (!data) { box.innerHTML = `<div class="empty">${t('Profilo non trovato. Forse il link è sbagliato o il tutor ha chiuso l\'account. <a href="#annunci">Guarda gli annunci</a>.', 'Profile not found. The link may be wrong or the tutor closed their account. <a href="#annunci">See listings</a>.')}</div>`; return; }
   const P = data, first = esc(P.name.split(" ")[0]);
   const since = new Date(P.since).toLocaleDateString(LOC, { month: "long", year: "numeric" });
-  const posts = P.posts.map(x => ({ ...x, slug: null, verified_school: null, reviews_count: 0 }));
+  const posts = P.posts.map(x => ({ ...x, slug: null, verified_school: null, reviews_count: 0, free_today: P.free_today, free_note: P.free_note }));
   const facts = [
     P.reviews_count ? `<span><b>★ ${dec(P.rating)}</b> · ${P.reviews_count} ${P.reviews_count === 1 ? t("recensione", "review") : t("recensioni", "reviews")}</span>` : `<span>${t("Ancora nessuna recensione", "No reviews yet")}</span>`,
     `<span><b>${P.lessons}</b> ${P.lessons === 1 ? t("lezione fatta", "lesson given") : t("lezioni fatte", "lessons given")}</span>`,
@@ -892,8 +1256,13 @@ async function shareProfile(P) {
 }
 function setupSharePanel(myPosts) {
   const panel = $("#sharePanel");
-  const show = isAdult() && profile.slug;
+  const show = isAdult() && profile.slug && profile.role !== "genitore";
+  $("#availPanel").hidden = !(isAdult() && profile.role !== "genitore");
   panel.hidden = !show; if (!show) return;
+  $("#newSession").onclick = () => {
+    if (!myPosts.some(p => p.kind === "offro" && p.active)) return toast(t("Pubblica prima un annuncio in cui offri ripetizioni.", "First post a listing offering tutoring."));
+    sessionSheet(myPosts);
+  };
   const url = profileUrl(profile.slug);
   $("#profUrl").value = url; $("#viewProf").href = "#t/" + encodeURIComponent(profile.slug);
   $("#badgeNote").innerHTML = profile.verified_school
@@ -922,6 +1291,9 @@ sb.auth.onAuthStateChange((ev, session) => {
   }, 0);
 });
 addEventListener("hashchange", startPolling);
+// link di invito (?ref=slug): lo ricordiamo fino all'iscrizione e lo togliamo dall'indirizzo
+try { const u = new URL(location.href), r = u.searchParams.get("ref");
+  if (r !== null) { if (/^[a-z0-9-]{3,80}$/.test(r)) ls.set("rip-ref", r); u.searchParams.delete("ref"); history.replaceState(null, "", u.pathname + u.search + u.hash); } } catch (e) {}
 setKind("offro");
 $("#where")._place = me; $("#whereLoc").className = "loc ok"; $("#whereLoc").textContent = "✓ " + me.label;
 loadPosts();
